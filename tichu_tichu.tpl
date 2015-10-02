@@ -39,7 +39,7 @@
 	</div>
 </div>
 <script>
-	var jstpl_cardontable = '<div class="cardontable" id="cardontable_${player_id}_${card_id}" style="background-position:-${x}px -${y}px;top:${top}px;left:${left}px;z-index:${z};">\
+	var jstpl_cardontable = '<div class="cardontable" id="cardontable_${player_id}_${card_id}" style="background-position:-${x}px -${y}px;z-index:${z};">\
 		</div>';
 </script>  
 {OVERALL_GAME_FOOTER}
