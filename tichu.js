@@ -119,6 +119,10 @@ function (dojo, declare) {
 		//// Utility methods
 		/* Here, you can define utility methods that you can use everywhere in your JS script. */
 		
+	    //get card value based on it's unique identifier
+        getCardValueByTypeID: function(cardTypeID) {
+            return (cardTypeID % 14) + 1;
+        },
 		// Get card unique identifier based on its color and value
 		getCardUniqueId: function( color, value ){
 			return (color-1)*14+(value-1);
@@ -138,55 +142,45 @@ function (dojo, declare) {
 		},
 		// This is called from setup(68) (refresh page & new game) and from tichu.js:notif_playCards(295)
 		playCardOnTable: function( player_id, color, value, card_id, cards_order, plays_order ) {
-			cards_order = typeof cards_order !== 'undefined' ? cards_order : 0; // If null, assign 0
-			plays_order = typeof plays_order !== 'undefined' ? plays_order : 0; // If null, assign 0
+			cards_order = typeof cards_order !== 'undefined' ? cards_order : 1; // If null, assign 1
+			plays_order = typeof plays_order !== 'undefined' ? plays_order : 1; // If null, assign 1
 			// cards_order affects Left     (Card #1-14; multiple cards in one play)
 			// plays_order affects Top&Left (Play #1-14; multiple plays in one trick)
-			// The below are all for final placement
-			tops=(10*plays_order); 
-			left=(12*cards_order)+(10*plays_order);
-			z=(1*cards_order)+(20*plays_order);
-			x=this.cardwidth*(value-1);
-			y=this.cardheight*(color-1);
+
+		    // The below are all for final placement
+			plays_order = plays_order - 1; //because we want first one aligned with template div
+			cards_order = cards_order - 1;
+            var topOffset = (10 * plays_order);
+		    var leftOffset = (12*cards_order)+(10*plays_order);
+		    var z = (1 * cards_order) + (20 * plays_order);
+		    var x = this.cardwidth*(value-1);
+		    var y = this.cardheight*(color-1);
 			// player_id => direction
 			// See tichu_tichu.tpl for manifestation of placing cards
 			dojo.place( // This inserts HTML with variable parameters onto a player's hand
 				this.format_block( 'jstpl_cardontable', { // x,y = tichu-cards.png (css background-position)
 					x: x,	// width:  73px
 					y: y,	// height: 98px
-					left: left,
-					top:  tops,
 					z: z, // z-index (what card is on top)
 					player_id: player_id,
 					card_id: card_id
 				} ), 'playertablecard_'+player_id );
-			// These are absolute top & left for movement final positioning
-			var cardendpos=$('playertablecard_'+player_id);
-			topmove =cardendpos.top;
-			leftmove=cardendpos.left;
-			console.log(this);
-			console.log('card placement',x,y,left,tops,z,cards_order,plays_order,player_id,this.player_id,card_id);
-			if( player_id != this.player_id ) { // Some opponent played a card. Move card from player panel
-				// this.placeOnObject( mobile_obj, target_obj ), where card starts (first appears before moving)
-				// This is showing coming from south, needs to come from scores
+			if (player_id != this.player_id) {
+			    // Some opponent played a card. Move card from player panel
 				this.placeOnObject('cardontable_'+player_id+'_'+card_id,'overall_player_board_'+player_id);
-				// this.placeOnObject('cardontable_'+card_id,'overall_player_board_'+player_id);
-			} else { // You played cards. If exists in hand, move cards from hand to table, remove hand item
-				if($('myhand_item_'+card_id)){ // Verify it exists in 1st person's hand
-				// if( $('myhand_item_'+card_id) ) {
-					// this.placeOnObjectPos( mobile_obj, target_obj, target_x, target_y )
-					this.placeOnObject('cardontable_'+player_id+'_'+card_id,'myhand_item_'+card_id);
-					// this.placeOnObjectPos('cardontable_'+card_id,'myhand_item_'+card_id,left,top);
-					//this.placeOnObjectPos( 'cardontable_'+player_id, 'myhand_item_'+card_id,left,top );
-					this.playerHand.removeFromStockById( card_id );
-				} else console.log('Failed to remove card from hand');
-				// console.log(this);
+			} else {
+			    // You played cards. If exists in hand, move cards from hand to table, remove hand item
+			    // Verify it exists in 1st person's hand
+			    if ($('myhand_item_' + card_id)) {
+			        this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
+			        this.playerHand.removeFromStockById(card_id);
+			    } else {
+			        console.log('Failed to remove card from hand');
+			    }
 			}
-			// In any case: move it to its final destination
-			// this.slideToObjectPos( mobile_obj, target_obj, target_x, target_y, duration, delay ).play();
-			// this.slideToObject('cardontable_'+card_id,'playertablecard_'+player_id).play();
-			this.slideToObject('cardontable_'+player_id+'_'+card_id,'playertablecard_'+player_id).play();
-			//this.slideToObjectPos('cardontable_'+player_id,'playertablecard_'+player_id,leftmove,topmove).play();
+
+            // In any case: move it to its final destination
+			this.slideToObjectPos('cardontable_'+player_id+'_'+card_id,'playertablecard_'+player_id,leftOffset, topOffset).play();
 		},
 		
 		///////////////////////////////////////////////////
@@ -243,9 +237,9 @@ function (dojo, declare) {
 					// break;
 				case 1:		// Singles good play
 					break;
-				case 2:		// Doubles
-					if (items[0]==items[1]) // Not correct, how to get actual card from JS?
-						playType=1;
+			    case 2:		// Doubles
+			        if (this.getCardValueByTypeID(items[0].type) == this.getCardValueByTypeID(items[1].type))
+			            playType=1;
 					else {
 						this.showMessage( _("Doubles must match"), 'error' );
 						return; }
@@ -324,7 +318,8 @@ function (dojo, declare) {
 		},
 		// This is called by dojo redirection from playCards() in tichu.game.php:292
 		notif_playCards: function( notif ) { // Play a card on the table
-			console.log('notif_playCards',notif);x=notif.args;
+		    console.log('notif_playCards', notif);
+		    x = notif.args;
 			this.playCardOnTable(x.player_id,x.color,x.value,x.card_ids,x.cards_order,x.plays_order);// Goto 140
 		},
 		notif_trickWin: function( notif ) {

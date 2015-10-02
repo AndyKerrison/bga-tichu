@@ -335,6 +335,10 @@ class Tichu extends Table {
 				}
 				if ($sql) self::DbQuery($sql);
 				break;
+            case 2:
+                //AK- error disabled so I can test the animation
+                //throw new feException( 'Doubles play still WIP' );
+                break;
 			default:
 				throw new feException( 'Only single play is currently setup' );
 		}
@@ -351,10 +355,16 @@ class Tichu extends Table {
 		// notification_args: The arguments of your notifications, as an associative array.
 		// from tichu.js: this.playCardOnTable( notif.args.player_id, notif.args.color, notif.args.value, notif.args.card_ids, notif.args.cards_order, notif.args.plays_order );
 		// Future also notify of Wish and Tichu calls and Bombs
-		if ($playType==0) { // For Singles
-			$top=($playCards[0]['plays_order']*20);
+        self::debug("PLAYCARDS notification start");
+        self::debug("PLAYCARDS playtype [".$playType."]");
+        //TODO $playType is not getting set correctly
+		//disabled check until it is, so I can test animation
+        //if ($playType==0) { // For Singles
+        {
+        	$top=($playCards[0]['plays_order']*20);
 			$left=(($playCards[0]['plays_order']+$playCards[0]['cards_order'])*20);
 			if ($playCards[0]['type_arg']>1) { // Not a Special card
+                self::debug("PLAYCARDS sending normal card notification");
 				self::notifyAllPlayers( 
 					'playCards', // The notification to call tichu.js:306
 					clienttranslate('${player_name} plays ${value_displayed}'), // Display text
@@ -389,6 +399,8 @@ class Tichu extends Table {
 				);
 			}
 		}
+
+        self::debug("PLAYCARDS card notifications finished");
 		self::setGameStateValue( 'playType', $playType );		
 		self::setGameStateValue( 'lastPlayPlayer', $player_id );
 		$this->gamestate->nextState( 'playCards' ); // Next player
