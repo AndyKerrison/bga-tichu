@@ -141,7 +141,8 @@ function (dojo, declare) {
 			return cardValue;
 		},
 		// This is called from setup(68) (refresh page & new game) and from tichu.js:notif_playCards(295)
-		playCardOnTable: function( player_id, color, value, card_id, cards_order, plays_order ) {
+		playCardOnTable: function (player_id, color, value, card_id, cards_order, plays_order) {
+		    console.log("playing card with ID " + card_id + ", card order " + cards_order + ", play order " + plays_order);
 			cards_order = typeof cards_order !== 'undefined' ? cards_order : 1; // If null, assign 1
 			plays_order = typeof plays_order !== 'undefined' ? plays_order : 1; // If null, assign 1
 			// cards_order affects Left     (Card #1-14; multiple cards in one play)
@@ -320,7 +321,9 @@ function (dojo, declare) {
 		notif_playCards: function( notif ) { // Play a card on the table
 		    console.log('notif_playCards', notif);
 		    x = notif.args;
-			this.playCardOnTable(x.player_id,x.color,x.value,x.card_ids,x.cards_order,x.plays_order);// Goto 140
+		    for (var i = 0; i < x.card_ids.length; i++) {
+		        this.playCardOnTable(x.player_id, x.color, x.value, x.card_ids[i], x.cards_order+i, x.plays_order); // Goto 140
+		    }
 		},
 		notif_trickWin: function( notif ) {
 			// We do nothing here (just wait in order players can view played cards before they're given to winner.

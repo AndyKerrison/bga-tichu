@@ -234,6 +234,7 @@ class Tichu extends Table {
 		$this->gamestate->nextState( 'playCards' ); 
 	}
 	function playCards( $playCardsIds ) { // Press Play button, play cards from player hand
+        self::debug("PLAYCARDS server action called with ids [".$playCardsIds."]");
 		self::checkAction( "playCards" );
 		$player_id = self::getActivePlayerId();
 		// Get all cards in player hand (for checking if the cards played are in player's hand)
@@ -251,9 +252,14 @@ class Tichu extends Table {
 		
 		// Build an array of card_id's in the player's hand
 		$playerHandIds=array();$playCards=array();
-		foreach ($playerHand as $card) {
+		foreach ($playerHand as $card)
+        {
 			$playerHandIds[]=$card['id'];
-			if (in_array($card['id'],$playCardsIds)) $playCards[]=$card; }
+			if (in_array($card['id'],$playCardsIds))
+            {
+                $playCards[]=$card;
+            }
+        }
 		// Check each card to be played and make sure they are ALL in this player's hand
 		$bIsInHand=(count($playCardsIds)==count(array_intersect($playCardsIds,$playerHandIds)))?true:false;
 		if( !$bIsInHand )	throw new feException( "Cards are not in your hand" );
@@ -336,8 +342,32 @@ class Tichu extends Table {
 				if ($sql) self::DbQuery($sql);
 				break;
             case 2:
-                //AK- error disabled so I can test the animation
-                //throw new feException( 'Doubles play still WIP' );
+                if ($playType>-1 && $playType != 1) // If the current play type is not first play/doubles
+					throw new feException( 'Invalid play: '.$this->play_type[$playType] );
+
+                $playValue=$playCards[0]['type_arg']*10; // Normal cards value
+                self::setGameStateValue( 'maxCardValue', $playValue );
+				self::setGameStateValue( 'playType', 1 ); //doubles
+
+				//todo - validate here if its a legal play
+
+                $playerCardsOnTable = $this->getCardsInLocation( 'cardsontable', $player_id );
+                $plays_order=0; // Find the highest plays_order for this player before playing the new cards
+                if ($playerCardsOnTable) // Check if this player already has cards on table to get plays_order
+					foreach ($playerCardsOnTable as $card) // Scan his played cards to get the current highest
+						$plays_order=max($card['plays_order'],$plays_order);
+				else $plays_order=0;
+				$plays_order++; // Increment plays_order by 1, send with playing card
+				$sql=''; // Set the plays_order one higher, and make each card played a higher cards_order
+				for ( $cards_order=1; $cards_order <= count($playCardsIds); $cards_order++) {
+                    $card_id=$playCards[$cards_order-1]['id'];
+					$playCards[$cards_order-1]['cards_order']=$cards_order; // This will have to be sorted by weight
+					$playCards[$cards_order-1]['plays_order']=$plays_order; // What play # is this player on
+					$sql ="UPDATE card SET card_cards_order='$cards_order',card_plays_order='$plays_order' ".
+						"WHERE card_id = '$card_id';";
+                    if ($sql) self::DbQuery($sql);
+				}
+				
                 break;
 			default:
 				throw new feException( 'Only single play is currently setup' );
