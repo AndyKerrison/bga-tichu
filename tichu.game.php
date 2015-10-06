@@ -280,8 +280,7 @@ class Tichu extends Table {
 			case 1:
 				if ($playType>0) // If the current play type is not singles or not first play
 					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
-				$playValue=$playCards[0]['type_arg']*10; // Normal cards value
-				$card_id=$playCards[0]['id'];
+                $playValue=$playCards[0]['type_arg']*10; // Normal cards value
 				if ($playValue==10) { // Specials
 					switch ($playCards[0]['type']) {
 						case 1:	// Dog
@@ -319,58 +318,36 @@ class Tichu extends Table {
 						default:
 							throw new feException( 'error type_arg:1, type:'+$playCards[0]['type'] );
 					}
-					$playType=0;
 				}
 				if ( $maxCardValue >= $playValue ) // Invalid move: play must be higher
 					throw new feException( 'Must play a card that is higher than the highest play' );
-				self::setGameStateValue( 'maxCardValue', $playValue );
+
+                //set $playType after validation as later code needs it.
+                //save $playValue/$playType for later plays
+                $playType=0;
+                self::setGameStateValue( 'maxCardValue', $playValue );
 				self::setGameStateValue( 'playType', $playType );
-				$playerCardsOnTable = $this->getCardsInLocation( 'cardsontable', $player_id );
-				$plays_order=0; // Find the highest plays_order for this player before playing the new cards
-				if ($playerCardsOnTable) // Check if this player already has cards on table to get plays_order
-					foreach ($playerCardsOnTable as $card) // Scan his played cards to get the current highest
-						$plays_order=max($card['plays_order'],$plays_order);
-				else $plays_order=0;
-				$plays_order++; // Increment plays_order by 1, send with playing card
-				$sql=''; // Set the plays_order one higher, and make each card played a higher cards_order
-				for ( $cards_order=1; $cards_order <= count($playCardsIds); $cards_order++) {
-					$playCards[$cards_order-1]['cards_order']=$cards_order; // This will have to be sorted by weight
-					$playCards[$cards_order-1]['plays_order']=$plays_order; // What play # is this player on
-					$sql.="UPDATE card SET card_cards_order='$cards_order',card_plays_order='$plays_order' ".
-						"WHERE card_id = '$card_id';";
-				}
-				if ($sql) self::DbQuery($sql);
+                
+                //update db and pass back changes to $playCards (card_order and plays_order) 
+				$playCards = self::UpdateCardsInDatabase($player_id, $playCardsIds, $playCards);
 				break;
             case 2:
                 if ($playType>-1 && $playType != 1) // If the current play type is not first play/doubles
-					throw new feException( 'Invalid play: '.$this->play_type[$playType] );
-
+					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
+                
+                //TODO - validate here if it's a legal play
+                
+                $playType = 1;
                 $playValue=$playCards[0]['type_arg']*10; // Normal cards value
                 self::setGameStateValue( 'maxCardValue', $playValue );
-				self::setGameStateValue( 'playType', 1 ); //doubles
+				self::setGameStateValue( 'playType', $playType); //doubles
 
-				//todo - validate here if its a legal play
-
-                $playerCardsOnTable = $this->getCardsInLocation( 'cardsontable', $player_id );
-                $plays_order=0; // Find the highest plays_order for this player before playing the new cards
-                if ($playerCardsOnTable) // Check if this player already has cards on table to get plays_order
-					foreach ($playerCardsOnTable as $card) // Scan his played cards to get the current highest
-						$plays_order=max($card['plays_order'],$plays_order);
-				else $plays_order=0;
-				$plays_order++; // Increment plays_order by 1, send with playing card
-				$sql=''; // Set the plays_order one higher, and make each card played a higher cards_order
-				for ( $cards_order=1; $cards_order <= count($playCardsIds); $cards_order++) {
-                    $card_id=$playCards[$cards_order-1]['id'];
-					$playCards[$cards_order-1]['cards_order']=$cards_order; // This will have to be sorted by weight
-					$playCards[$cards_order-1]['plays_order']=$plays_order; // What play # is this player on
-					$sql ="UPDATE card SET card_cards_order='$cards_order',card_plays_order='$plays_order' ".
-						"WHERE card_id = '$card_id';";
-                    if ($sql) self::DbQuery($sql);
-				}
+                //update cards in database
+                $playCards = self::UpdateCardsInDatabase($player_id, $playCardsIds, $playCards);
 				
                 break;
 			default:
-				throw new feException( 'Only single play is currently setup' );
+				throw new feException( 'Play type not yet implemented' );
 		}
 		
 		// Checks are done! now we can play our card
@@ -387,54 +364,70 @@ class Tichu extends Table {
 		// Future also notify of Wish and Tichu calls and Bombs
         self::debug("PLAYCARDS notification start");
         self::debug("PLAYCARDS playtype [".$playType."]");
-        //TODO $playType is not getting set correctly
-		//disabled check until it is, so I can test animation
-        //if ($playType==0) { // For Singles
+
+
+        //client call is very similar in each case, shared code between all play types,
+        //but with slightly different text
+        if ($playType==0) { // For Singles
+            if ($playCards[0]['type_arg']>1) { // Not a Special card
+                $displayText = clienttranslate('${player_name} plays ${value_displayed}');
+                $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
+                $i18n = array( 'value_displayed' ); //not needed now?
+            }
+            else{
+                $displayText = clienttranslate('${player_name} plays ${value_displayed} (${playValue})');
+                $displayValue = $this->specials_label[ $playCards[0]['type'] ];
+                $i18n = array( 'specials_label' ); //check if this is needed
+            }
+        }
+        else if ($playType == 1) //doubles
         {
-        	$top=($playCards[0]['plays_order']*20);
-			$left=(($playCards[0]['plays_order']+$playCards[0]['cards_order'])*20);
-			if ($playCards[0]['type_arg']>1) { // Not a Special card
-                self::debug("PLAYCARDS sending normal card notification");
-				self::notifyAllPlayers( 
-					'playCards', // The notification to call tichu.js:306
-					clienttranslate('${player_name} plays ${value_displayed}'), // Display text
-					array( // Notif.args to pass to JS
+            $displayText = clienttranslate('${player_name} plays a double ${value_displayed}');
+            $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
+            $i18n = array( 'value_displayed' ); //check if needed
+        }
+
+        self::notifyAllPlayers( 
+            'playCards', // The notification to call tichu.js:306
+            $displayText,
+            array( // Notif.args to pass to JS
 						'i18n' => array( 'value_displayed' ),
 						'card_ids' => $playCardsIds,
 						'player_id' => $player_id,
 						'player_name' => self::getActivePlayerName(),
 						'value' => $playCards[0]['type_arg'],
 						'color' => $playCards[0]['type'],
-						'value_displayed' => $this->values_label[ $playCards[0]['type_arg'] ],
+                        'playValue' => $playValue,
+						'value_displayed' => $displayValue,
 						'cards_order' =>$playCards[0]['cards_order'],
 						'plays_order'=>$playCards[0]['plays_order']
 					) 
-				);
-			} else { // Mah Jong, Phoenix, Dragon (Dog is covered above)
-				self::notifyAllPlayers( 
-					'playCards', // The notification to call tichu.js:306
-					clienttranslate('${player_name} plays ${specials_label} (${specials_value})'), // Display text
-					array( // Notif.args to pass to JS
-						'i18n' => array( 'specials_label' ),
-						'card_ids' => $playCardsIds,
-						'player_id' => $player_id,
-						'player_name' => self::getActivePlayerName(),
-						'value' => $playCards[0]['type_arg'],
-						'color' => $playCards[0]['type'],
-						'specials_value' => $playValue,
-						'specials_label' => $this->specials_label[ $playCards[0]['type'] ],
-						'cards_order' =>$playCards[0]['cards_order'],
-						'plays_order' =>$playCards[0]['plays_order']
-					) 
-				);
-			}
-		}
-
+		);
+                
         self::debug("PLAYCARDS card notifications finished");
 		self::setGameStateValue( 'playType', $playType );		
 		self::setGameStateValue( 'lastPlayPlayer', $player_id );
 		$this->gamestate->nextState( 'playCards' ); // Next player
 	}
+    function UpdateCardsInDatabase($player_id, $playCardsIds, $playCards){
+        $playerCardsOnTable = $this->getCardsInLocation( 'cardsontable', $player_id );
+        $plays_order=0; // Find the highest plays_order for this player before playing the new cards
+        if ($playerCardsOnTable) // Check if this player already has cards on table to get plays_order
+            foreach ($playerCardsOnTable as $card) // Scan his played cards to get the current highest
+                $plays_order=max($card['plays_order'],$plays_order);
+        else $plays_order=0;
+        $plays_order++; // Increment plays_order by 1, send with playing card
+        $sql=''; // Set the plays_order one higher, and make each card played a higher cards_order
+        for ( $cards_order=1; $cards_order <= count($playCardsIds); $cards_order++) {
+            $card_id=$playCards[$cards_order-1]['id'];
+            $playCards[$cards_order-1]['cards_order']=$cards_order; // This will have to be sorted by weight
+            $playCards[$cards_order-1]['plays_order']=$plays_order; // What play # is this player on
+            $sql ="UPDATE card SET card_cards_order='$cards_order',card_plays_order='$plays_order' ".
+                "WHERE card_id = '$card_id';";
+            if ($sql) self::DbQuery($sql);
+        }
+        return $playCards;
+    }
 	function giveLeft( $card_ids ) {
 		self::checkAction( "giveLeft" );
 		$player_id = self::getCurrentPlayerId();
