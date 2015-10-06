@@ -318,7 +318,9 @@ function (dojo, declare) {
 			}            
 		},
 		// This is called by dojo redirection from playCards() in tichu.game.php:292
-		notif_playCards: function( notif ) { // Play a card on the table
+		notif_playCards: function (notif) { // Play a card on the table
+		    //todo - currently this ignores the card_order in the db
+            //this will need to be fixed when two pairs & runs are implemented.
 		    console.log('notif_playCards', notif);
 		    x = notif.args;
 		    for (var i = 0; i < x.card_ids.length; i++) {
