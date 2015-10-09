@@ -33,7 +33,8 @@ class Tichu extends Table {
 			"OneTwoVictory"			=> 17,
 			"dogNextPlayer"			=> 18,
 			"gameLength"				=> 100,
-			"grandTichu"				=> 101
+			"grandTichu"				=> 101,
+            "grandTichuPasses"          => 102,
 		) );
 		$this->cards = self::getNew( "module.common.deck" );
 		$this->cards->init( "card" );
@@ -98,7 +99,8 @@ class Tichu extends Table {
 		self::setGameStateInitialValue( 'OneTwoVictory', -1 );
 		// Dog Skip (Skip if this player if he is flagged or this prop > 0
 		self::setGameStateInitialValue( 'dogNextPlayer', 0 );
-		
+        //number of passes during grand tichu phase
+		self::setGameStateInitialValue( 'grandTichuPasses', 0 );
 		// Count # of consecutive passes, if 3 then trick is over
 		// self::setGameStateInitialValue( 'consecutivePassPlays', 0 );
 		
@@ -222,10 +224,32 @@ class Tichu extends Table {
 //////////// 
 	/*  Each time a player is doing some game action, one of this method below is called.
 		(note: each method below correspond to an input method in tichu.action.php) */
+    function passGrandTichu(){
+        self::notifyAllPlayers( 'grandTichuPass',
+            clienttranslate('${player_name} passes'), array(
+            'player_name' => self::getActivePlayerName()
+            ) );
+
+        $grandTichuPasses = self::getGameStateValue( 'grandTichuPasses');
+        $grandTichuPasses = $grandTichuPasses + 1;
+        self::setGameStateValue( 'grandTichuPasses', $grandTichuPasses);
+        if ($grandTichuPasses < 4)
+        {
+            $this->gamestate->nextState( 'passGrandTichu' ); // Next player
+        }
+        else
+        {
+            $this->gamestate->nextState( 'allSkipped' );
+        }
+    }
 	function callGrandTichu()
     {
         //todo save call
-        //todo notify all players
+
+        self::notifyAllPlayers( 'grandTichuCall',
+            clienttranslate('${player_name} calls Grand Tichu'), array(
+            'player_name' => self::getActivePlayerName()
+            ) );
 
         $this->gamestate->nextState( 'grandTichuCalled' ); 
     }
@@ -243,9 +267,6 @@ class Tichu extends Table {
 		// Directs to states.inc.php:104,:110->stNextPlayer(tichu.game.php:513)
 		$this->gamestate->nextState( 'playCards' ); 
 	}
-    function passGrandTichu(){
-        $this->gamestate->nextState( 'passGrandTichu' ); // Next player
-    }
 	function playCards( $playCardsIds ) { // Press Play button, play cards from player hand
         self::debug("PLAYCARDS server action called with ids [".$playCardsIds."]");
 		self::checkAction( "playCards" );
@@ -592,24 +613,15 @@ class Tichu extends Table {
 		self::setGameStateValue( 'alreadyFulfilledWish', 0 );
 		$this->gamestate->nextState( "" );
 	}
+    function stPassCards() {
+        self::debug("stPassCards");
+        $this->gamestate->setAllPlayersMultiactive();
+	}
 	function stGiveCards() {
         self::debug("stGiveCards");
-		//$handType = self::getGameStateValue( "currentHandType" ); // Pass Left, Right, Across, None
-		// For now (until ready to tackle it) always skip this step, this skips call to function giveCards() action
-		//$this->gamestate->nextState( "skip" );
-		// If we are in hand type "3" = "keep cards", skip this step
-		//if( $handType == 3 ) {
-		//	$this->gamestate->nextState( "skip" );
-		//} else { // Active all players (everyone has to choose 3 cards to give)
-			//$this->gamestate->setAllPlayersMultiactive();
-		//}
+        self::setGameStateValue( 'grandTichuPasses', 0);
         $this->gamestate->nextState( "cardsDealt" );
 	}
-    function stNextPlayerCallGrandTichu() {
-        self::debug("stNextPlayerCallGrandTichu");
-        $this->gamestate->setAllPlayersMultiactive();
-        $this->gamestate->nextState( "allPassed" );
-    }
 	function stTakeCards() {
         self::debug("stTakeCards");
 		// Take cards given by the other player
@@ -645,6 +657,11 @@ class Tichu extends Table {
 		// Count # of consecutive passes, if 3 then trick is over
 		// self::setGameStateInitialValue( 'consecutivePassPlays', 0 );
 		$this->gamestate->nextState('');
+	}
+    function stNextPlayerDeclareGrandTichu() { 
+        self::debug("stNextPlayerDeclareGrandTichu");
+        $this->activeNextPlayer();
+		$this->gamestate->nextState( "" ); 
 	}
 	function stBeforePlayerTurn() { // This can also redirect to Bomb play maybe
         self::debug("stBeforePlayerTurn");

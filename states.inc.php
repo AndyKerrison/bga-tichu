@@ -77,11 +77,18 @@ $machinestates = array(
 	  "descriptionmyturn" => clienttranslate('${you} must choose to call Grant Tichu or Pass'),
 	  "type" => "activeplayer",
 	  "possibleactions" => array( "callGrandTichu", "passGrandTichu" ),
-	  "transitions" => array( "grandTichuCalled" => 130, "passGrandTichu" => 120, "allSkipped" => 130)        
+	  "transitions" => array( "grandTichuCalled" => 130, "passGrandTichu" => 125, "allSkipped" => 130)        
+	),
+    125 => array(       
+	  "name" => "nextPlayerDeclareGrandTichu",
+      "type" => "game",
+      "action" => "stNextPlayerDeclareGrandTichu",
+	  "transitions" => array( "" => 120)        
 	),
     130 => array(       
 	  "name" => "passCards",
 	  "type" => "multipleactiveplayer",
+      "action" => "stPassCards",
       "descriptionmyturn" => clienttranslate('${you} must pass a card left, right, and across'),
       "possibleactions" => array( "passCards" ),
       "transitions" => array( "passCards" => 22)        
