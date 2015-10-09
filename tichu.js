@@ -66,6 +66,11 @@ function (dojo, declare) {
 				// This calls line 140
 				this.playCardOnTable( player_id, color, value, card.id, cards_order, plays_order );
 			}
+		    //if there are no card on table AND passing has not been done, show the dealing also
+			if (this.gamedatas.cardsontable == null || this.gamedatas.cardsontable.length == 0) {
+			    //alert("dealing");
+			    this.dealCards(gamedatas);
+			}
 			this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
 			// Setup game notifications to handle (see "setupNotifications" method below)
 			this.setupNotifications();
@@ -118,6 +123,31 @@ function (dojo, declare) {
 		///////////////////////////////////////////////////
 		//// Utility methods
 		/* Here, you can define utility methods that you can use everywhere in your JS script. */
+		dealCards : function (gamedatas) {
+		    var card_id = 0;
+		    var duration = 400;
+		    var delay = 75;
+		    /*for (var i = 0; i < 8; i++) {
+		        for (var player_id in gamedatas.players) {
+		            // player_id => direction
+		            // See tichu_tichu.tpl for manifestation of placing cards
+		            dojo.place( // This inserts HTML with variable parameters onto a player's hand
+		                this.format_block('jstpl_cardontable', {
+// x,y = tichu-cards.png (css background-position)
+		                    x: 100, // width:  73px
+		                    y: 100, // height: 98px
+		                    z: 0, // z-index (what card is on top)
+		                    player_id: player_id,
+		                    card_id: card_id
+		                }), 'playertablecard_' + player_id);
+		            this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'dealingstack');
+		            // In any case: move it to its final destination
+		            this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertablecard_' + player_id, 0, 0, duration, delay).play();
+		            delay += 125;
+		        }
+		    }*/
+		    //alert("done dealing cards");
+		},
 		
 	    //get card value based on it's unique identifier
         getCardValueByTypeID: function(cardTypeID) {
@@ -231,7 +261,7 @@ function (dojo, declare) {
 			// 20 = Bomb
 			//
 			// First check if it is a bomb play
-			playType=0; // For now assume Singles play
+			var playType=0; // For now assume Singles play
 			switch( items.length ) {
 				case 0:		// Can't push Play with no cards selected
 					return; 
@@ -244,9 +274,17 @@ function (dojo, declare) {
 					else {
 						this.showMessage( _("Doubles must match"), 'error' );
 						return; }
-					break;
+			        break;
+			    case 3:		//Triples
+			        if (this.getCardValueByTypeID(items[0].type) == this.getCardValueByTypeID(items[1].type) &&
+                        this.getCardValueByTypeID(items[1].type) == this.getCardValueByTypeID(items[2].type))
+			            playType = 2;
+			        else {
+			            this.showMessage(_("Doubles must match"), 'error');
+			            return;
+			        }
+			        break;
 				default:
-					this.showMessage( _("Only singles are setup"), 'error' );
 					this.showMessage( _("Unknown play"), 'error' );
 			} 
 			// Build Ajax concatenated string collection of card to play
@@ -308,14 +346,18 @@ function (dojo, declare) {
 		},
 		
 		// TODO: from this point and below, you can write your game notifications handling methods
-		notif_newHand: function( notif ) { // We received a new full hand of 14 cards.
-			this.playerHand.removeAll();
-			for( var i in notif.args.cards ) {
-				var card = notif.args.cards[i];
-				var color = card.type;
-				var value = card.type_arg;
-				this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
-			}            
+		notif_newHand: function (notif) { // We received a new full hand of 14 cards.
+		    alert("new hand");
+		    this.playerHand.removeAll();
+
+            //Create a pile of cards, and deal 14 to each player
+
+			//for( var i in notif.args.cards ) {
+			//	var card = notif.args.cards[i];
+			//	var color = card.type;
+			//	var value = card.type_arg;
+			//	this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
+			//}            
 		},
 		// This is called by dojo redirection from playCards() in tichu.game.php:292
 		notif_playCards: function (notif) { // Play a card on the table

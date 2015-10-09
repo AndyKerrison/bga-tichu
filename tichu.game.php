@@ -41,6 +41,7 @@ class Tichu extends Table {
 	protected function getGameName() { return "tichu"; }	
 	
 	protected function setupNewGame( $players, $options = array() ) {    
+        self::debug("setupNewGame");
 		/*  setupNewGame:
 		This method is called 1 time when a new game is launched.
 		In this method, you must setup the game according to game rules, in order
@@ -126,6 +127,7 @@ class Tichu extends Table {
 		_ when the game starts
 		_ when a player refresh the game page (F5)  */
 	protected function getAllDatas() {
+        self::debug("getAllDatas");
 		$result = array( 'players' => array() );
 		$player_id = self::getCurrentPlayerId();  // !! We must only return informations visible by this player !!
 		
@@ -335,10 +337,51 @@ class Tichu extends Table {
                 if ($playType>-1 && $playType != 1) // If the current play type is not first play/doubles
 					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
                 
-                //TODO - validate here if it's a legal play
+                $playType = 1;
+                $playValue=$playCards[0]['type_arg']*10; // Normal cards value
+
+                if ( $maxCardValue >= $playValue ) // Invalid move: play must be higher
+					throw new feException( 'Must play a card that is higher than the highest play' );
+
+                self::setGameStateValue( 'maxCardValue', $playValue );
+				self::setGameStateValue( 'playType', $playType); //doubles
+
+                //update cards in database
+                $playCards = self::UpdateCardsInDatabase($player_id, $playCardsIds, $playCards);
+				
+                break;
+            case 3:
+                if ($playType>-1 && $playType != 2) // If the current play type is not first play/doubles
+					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
                 
                 $playType = 1;
                 $playValue=$playCards[0]['type_arg']*10; // Normal cards value
+
+                if ( $maxCardValue >= $playValue ) // Invalid move: play must be higher
+					throw new feException( 'Must play a card that is higher than the highest play' );
+
+                self::setGameStateValue( 'maxCardValue', $playValue );
+				self::setGameStateValue( 'playType', $playType); //doubles
+
+                //update cards in database
+                $playCards = self::UpdateCardsInDatabase($player_id, $playCardsIds, $playCards);
+				
+                break;
+
+            case 4:
+                //4 cards could be: bomb, consecutive pairs
+                //5 cards could be: full house, straight
+                //6+ cards (even) could be: straight, consecutive pairs
+                //7+ cards (odd) could be: straight
+                if ($playType>-1 && $playType != 2) // If the current play type is not first play/doubles
+					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
+                
+                $playType = 1;
+                $playValue=$playCards[0]['type_arg']*10; // Normal cards value
+
+                if ( $maxCardValue >= $playValue ) // Invalid move: play must be higher
+					throw new feException( 'Must play a card that is higher than the highest play' );
+
                 self::setGameStateValue( 'maxCardValue', $playValue );
 				self::setGameStateValue( 'playType', $playType); //doubles
 
@@ -383,6 +426,12 @@ class Tichu extends Table {
         else if ($playType == 1) //doubles
         {
             $displayText = clienttranslate('${player_name} plays a double ${value_displayed}');
+            $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
+            $i18n = array( 'value_displayed' ); //check if needed
+        }
+        else if ($playType == 1) //triples
+        {
+            $displayText = clienttranslate('${player_name} plays a triple ${value_displayed}');
             $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
             $i18n = array( 'value_displayed' ); //check if needed
         }
@@ -439,6 +488,7 @@ class Tichu extends Table {
 		$player_id = self::getCurrentPlayerId();
 	}
 	function giveCards( $card_ids ) { // Give some cards (before the hands begin)
+        self::debug("giveCards");
 		self::checkAction( "giveCards" );
 		// !! Here we have to get CURRENT player (= player who send the request) and not
 		//    active player, cause we are in a multiple active player state and the "active player"
@@ -457,13 +507,13 @@ class Tichu extends Table {
 		// To which player should I give these cards ?
 		$player_to_give_cards = null;
 		$player_to_direction = self::getPlayersToDirection();   // Note: current player is on the south
-		$handType = self::getGameStateValue( "currentHandType" );
-		if( $handType == 0 )
-			$direction = 'W';
-		else if( $handType == 1 )
-			$direction = 'N';
-		else if( $handType == 2 )
-			$direction = 'E';
+		//$handType = self::getGameStateValue( "currentHandType" );
+		//if( $handType == 0 )
+		//	$direction = 'W';
+		//else if( $handType == 1 )
+		//	$direction = 'N';
+		//else if( $handType == 2 )
+		//	$direction = 'E';
 		foreach( $player_to_direction as $opponent_id => $opponent_direction ) {
 			if( $opponent_direction == $direction )
 				$player_to_give_cards = $opponent_id; }
@@ -487,13 +537,13 @@ class Tichu extends Table {
 	/*  Here, you can create methods defines as "game state arguments" (see "args" property in states.inc.php).
 	These methods are returning some additional informations that are specific to the current game state.  */
 	function argGiveCards() {
-		$handType = self::getGameStateValue( "currentHandType" );
-		$direction = "";
-		if( $handType == 0 )
-			$direction = clienttranslate( "the player on the left" );
-		else if( $handType == 1 )
-			$direction = clienttranslate( "the player across the table" );
-		else if( $handType == 2 )
+		//$handType = self::getGameStateValue( "currentHandType" );
+		//$direction = "";
+		//if( $handType == 0 )
+		//	$direction = clienttranslate( "the player on the left" );
+		//else if( $handType == 1 )
+		//	$direction = clienttranslate( "the player across the table" );
+		//else if( $handType == 2 )
 			$direction = clienttranslate( "the player on the right" );
 		return array( "i18n" => array('direction'), "direction" => $direction );
 	}
@@ -513,6 +563,7 @@ class Tichu extends Table {
 	/*  Here, you can create methods defines as "game state actions" (see "action" property in states.inc.php).
 	The action method of state X is called everytime the current game state is set to X.  */
 	function stNewHand() {
+        self::debug("stNewHand");
 		self::incStat( 1, "handNbr" );
 		// Take back all cards (from any location => null) to deck
 		$this->cards->moveAllCardsInLocation( null, "deck" );
@@ -531,17 +582,23 @@ class Tichu extends Table {
 		$this->gamestate->nextState( "" );
 	}
 	function stGiveCards() {
-		$handType = self::getGameStateValue( "currentHandType" ); // Pass Left, Right, Across, None
+        self::debug("stGiveCards");
+		//$handType = self::getGameStateValue( "currentHandType" ); // Pass Left, Right, Across, None
 		// For now (until ready to tackle it) always skip this step, this skips call to function giveCards() action
-		$this->gamestate->nextState( "skip" );
+		//$this->gamestate->nextState( "skip" );
 		// If we are in hand type "3" = "keep cards", skip this step
-		if( $handType == 3 ) {
-			$this->gamestate->nextState( "skip" );
-		} else { // Active all players (everyone has to choose 3 cards to give)
+		//if( $handType == 3 ) {
+		//	$this->gamestate->nextState( "skip" );
+		//} else { // Active all players (everyone has to choose 3 cards to give)
 			$this->gamestate->setAllPlayersMultiactive();
-		}
+		//}
 	}
+    function stNextPlayerCallGrandTichu() {
+        self::debug("stNextPlayerCallGrandTichu");
+        $this->gamestate->nextState( "allPassed" );
+    }
 	function stTakeCards() {
+        self::debug("stTakeCards");
 		// Take cards given by the other player
 		$players = self::loadPlayersBasicInfos();
 		foreach( $players as $player_id => $player ) {
@@ -559,10 +616,11 @@ class Tichu extends Table {
 		$this->gamestate->nextState( "startHand" );  // For now
 	}
 	function stNewTrick() {
+        self::debug("stNewTrick");
 		// New trick: active the player who wins the last trick, or the player who owns the Mah Jong card
 		// $current_player = self::getCurrentPlayerId();
 		// Then have the Send cards button, and a back button
-		self::setGameStateValue( 'currentHandType', 0 );
+		//self::setGameStateValue( 'currentHandType', 0 );
 		// Set high card value
 		self::setGameStateValue( 'maxCardValue', 0 );
 		// Reset lastPlayPlayer
@@ -576,6 +634,7 @@ class Tichu extends Table {
 		$this->gamestate->nextState('');
 	}
 	function stBeforePlayerTurn() { // This can also redirect to Bomb play maybe
+        self::debug("stBeforePlayerTurn");
 		// $x=false;
 		// $dogNextPlayer = self::getGameStateValue( "dogNextPlayer" );
 		// $current_player = self::getActivePlayerId();
@@ -594,6 +653,7 @@ class Tichu extends Table {
 		// if ($x==6) throw new feException( "Looped too many times searching for next player" );
 	}
 	function stEndTurn() {
+        self::debug("stEndTurn");
 		// Active next player OR end the trick and go to the next trick OR end the hand
 		// Need to change this to: If it's your turn and you were the last to play then pass trick to player 
 		//		and pass "nextTrick" => 30
@@ -716,9 +776,11 @@ class Tichu extends Table {
 		}
 	}
 	function stSkipPlayerTurn() {
+        self::debug("stSkipPlayerTurn");
 		$this->gamestate->nextState('');
 	}
 	function stEndHand() { // Count and score points, then end the game or go to the next hand.
+        self::debug("stEndHand");
 		// $players = self::loadPlayersBasicInfos();
 		
 		// // Gets all "hearts" + queen of spades
