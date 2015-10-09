@@ -105,7 +105,11 @@ function (dojo, declare) {
 		onUpdateActionButtons: function( stateName, args ) {
 			console.log( 'onUpdateActionButtons: '+stateName+' Args:'+args );
 			if( this.isCurrentPlayerActive() ) {
-				switch( stateName ) {
+			    switch (stateName) {
+			        case 'declareGrandTichu':
+			            this.addActionButton('passGrandTichu_button', _('Pass'), 'onPassGrandTichu');
+			            this.addActionButton('callGrandTichu_button', _('Call Grand Tichu'), 'onCallGrandTichu');
+                        break;
 					case 'giveCards':
 						this.addActionButton('giveCards_button', _('Give selected cards'), 'onGiveCards' );
 						break;
@@ -312,6 +316,20 @@ function (dojo, declare) {
 				this.ajaxcall("/tichu/tichu/giveCards.html", { 
 					cards:to_give, lock:true }, this, function(result){}, function(is_error){} );
 			}        
+		},
+		onCallGrandTichu: function () {
+		    if (this.checkAction('callGrandTichu')) {
+		        this.ajaxcall("/tichu/tichu/callGrandTichu.html", {
+		            lock: true
+		        }, this, function (result) { }, function (is_error) { });
+		    }
+		},
+		onPassGrandTichu: function () {
+		    if (this.checkAction('passGrandTichu')) {
+		        this.ajaxcall("/tichu/tichu/passGrandTichu.html", {
+		            lock: true
+		        }, this, function (result) { }, function (is_error) { });
+		    }
 		},
 		onPassPlay: function() {
 			if( this.checkAction('passPlay') ) {

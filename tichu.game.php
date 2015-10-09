@@ -222,7 +222,13 @@ class Tichu extends Table {
 //////////// 
 	/*  Each time a player is doing some game action, one of this method below is called.
 		(note: each method below correspond to an input method in tichu.action.php) */
-	
+	function callGrandTichu()
+    {
+        //todo save call
+        //todo notify all players
+
+        $this->gamestate->nextState( 'grandTichuCalled' ); 
+    }
 	function passPlay(){ // Press Pass button, skip turn
 		self::checkAction( "passPlay" );
 		if (self::getGameStateValue( 'playType' )<0) // If no cards or only dog on table you can't pass
@@ -237,6 +243,9 @@ class Tichu extends Table {
 		// Directs to states.inc.php:104,:110->stNextPlayer(tichu.game.php:513)
 		$this->gamestate->nextState( 'playCards' ); 
 	}
+    function passGrandTichu(){
+        $this->gamestate->nextState( 'passGrandTichu' ); // Next player
+    }
 	function playCards( $playCardsIds ) { // Press Play button, play cards from player hand
         self::debug("PLAYCARDS server action called with ids [".$playCardsIds."]");
 		self::checkAction( "playCards" );
@@ -592,11 +601,13 @@ class Tichu extends Table {
 		//if( $handType == 3 ) {
 		//	$this->gamestate->nextState( "skip" );
 		//} else { // Active all players (everyone has to choose 3 cards to give)
-			$this->gamestate->setAllPlayersMultiactive();
+			//$this->gamestate->setAllPlayersMultiactive();
 		//}
+        $this->gamestate->nextState( "cardsDealt" );
 	}
     function stNextPlayerCallGrandTichu() {
         self::debug("stNextPlayerCallGrandTichu");
+        $this->gamestate->setAllPlayersMultiactive();
         $this->gamestate->nextState( "allPassed" );
     }
 	function stTakeCards() {
