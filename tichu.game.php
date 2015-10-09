@@ -119,6 +119,8 @@ class Tichu extends Table {
 		$sql="UPDATE card SET card_plays_order='0', card_cards_order='0'";
 		self::DbQuery( $sql );
 		
+        $this->activeNextPlayer();
+
 		/********************* End of the game initialization ********************/
 	}
 	/*  getAllDatas: 
