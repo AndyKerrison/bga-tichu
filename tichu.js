@@ -352,7 +352,8 @@ function (dojo, declare) {
 		 In this method you associate each of your game notifs with your local method to handle it. Note:game
 		 notif names correspond to your "notifyAllPlayers" & "notifyPlayer" calls in your tichu.game.php file.*/
 		setupNotifications: function() {
-			console.log( 'notifications subscriptions setup' );
+		    console.log('notifications subscriptions setup');
+		    dojo.subscribe('addToHand', this, "notif_addToHand");
 			dojo.subscribe( 'newHand',	  this, "notif_newHand" );
 			dojo.subscribe( 'playCards', this, "notif_playCards" );
 			dojo.subscribe( 'trickWin',  this, "notif_trickWin" );
@@ -363,19 +364,29 @@ function (dojo, declare) {
 			dojo.subscribe( 'takeCards', this, "notif_takeCards" );
 		},
 		
-		// TODO: from this point and below, you can write your game notifications handling methods
-		notif_newHand: function (notif) { // We received a new full hand of 14 cards.
-		    alert("new hand");
+	    // TODO: from this point and below, you can write your game notifications handling methods
+		notif_addToHand: function (notif) { // We received the last 6 cards.
+		    
+		    //Create a pile of cards, and deal 14 to each player
+
+		    for (var i in notif.args.cards) {
+		        var card = notif.args.cards[i];
+		        var color = card.type;
+		        var value = card.type_arg;
+		        this.playerHand.addToStockWithId(this.getCardUniqueId(color, value), card.id);
+		    }
+		},
+		notif_newHand: function (notif) { // We received a new hand of 8 cards.
 		    this.playerHand.removeAll();
 
             //Create a pile of cards, and deal 14 to each player
 
-			//for( var i in notif.args.cards ) {
-			//	var card = notif.args.cards[i];
-			//	var color = card.type;
-			//	var value = card.type_arg;
-			//	this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
-			//}            
+            for( var i in notif.args.cards ) {
+				var card = notif.args.cards[i];
+				var color = card.type;
+				var value = card.type_arg;
+				this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
+			}            
 		},
 		// This is called by dojo redirection from playCards() in tichu.game.php:292
 		notif_playCards: function (notif) { // Play a card on the table

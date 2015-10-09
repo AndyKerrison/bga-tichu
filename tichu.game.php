@@ -568,17 +568,7 @@ class Tichu extends Table {
 ////////////
 	/*  Here, you can create methods defines as "game state arguments" (see "args" property in states.inc.php).
 	These methods are returning some additional informations that are specific to the current game state.  */
-	function argGiveCards() {
-		//$handType = self::getGameStateValue( "currentHandType" );
-		//$direction = "";
-		//if( $handType == 0 )
-		//	$direction = clienttranslate( "the player on the left" );
-		//else if( $handType == 1 )
-		//	$direction = clienttranslate( "the player across the table" );
-		//else if( $handType == 2 )
-			$direction = clienttranslate( "the player on the right" );
-		return array( "i18n" => array('direction'), "direction" => $direction );
-	}
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state actions
@@ -601,11 +591,11 @@ class Tichu extends Table {
 		$this->cards->moveAllCardsInLocation( null, "deck" );
 		$this->cards->shuffle( 'deck' );
 		
-		// Deal 14 cards to each players
-		// Create deck, shuffle it and give 14 initial cards
+		// Deal 8 cards to each players
+		// Create deck, shuffle it and give 8 initial cards
 		$players = self::loadPlayersBasicInfos();
 		foreach( $players as $player_id => $player ) {
-			$cards = $this->cards->pickCards( 14, 'deck', $player_id );
+			$cards = $this->cards->pickCards( 8, 'deck', $player_id );
 			
 			// Notify player about his cards
 			self::notifyPlayer( $player_id, 'newHand', '', array( 'cards' => $cards ) );
@@ -615,6 +605,16 @@ class Tichu extends Table {
 	}
     function stPassCards() {
         self::debug("stPassCards");
+
+        //must deal out the remaining 6 cards each, and notify players
+        $players = self::loadPlayersBasicInfos();
+        foreach( $players as $player_id => $player ) {
+			$cards = $this->cards->pickCards( 6, 'deck', $player_id );
+			
+			// Notify player about his cards
+			self::notifyPlayer( $player_id, 'addToHand', '', array( 'cards' => $cards ) );
+		}
+
         $this->gamestate->setAllPlayersMultiactive();
 	}
 	function stGiveCards() {

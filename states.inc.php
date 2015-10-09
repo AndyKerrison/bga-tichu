@@ -68,7 +68,6 @@ $machinestates = array(
 	  "name" => "giveCards1",
 	   "type" => "game",
 	  "action" => "stGiveCards",
-	  "args" => "argGiveCards",
 	  "transitions" => array( "cardsDealt" => 120)        
 	),
     120 => array(       
