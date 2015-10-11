@@ -120,6 +120,9 @@ class Tichu extends Table {
 		// Reset plays_order & cards_order
 		$sql="UPDATE card SET card_plays_order='0', card_cards_order='0'";
 		self::DbQuery( $sql );
+		// Reset all players have called tichu or grand tichu this hand 
+		$sql="UPDATE player SET player_call_tichu='0', player_call_grand_tichu='0'";
+		self::DbQuery( $sql );
 		
         $this->activeNextPlayer();
 
@@ -137,7 +140,7 @@ class Tichu extends Table {
 		
 		// Get information about players
 		// Note: you can retrieve some extra field you add for "player" table in "dbmodel.sql" if you need it.
-		$sql = "SELECT player_id id, player_score score FROM player ORDER BY player_no";
+		$sql = "SELECT player_id id, player_score score, player_team team, player_call_tichu call_tichu, player_call_grand_tichu call_grand_tichu FROM player ORDER BY player_no";
 		$dbres = self::DbQuery( $sql );
 		while( $player=mysql_fetch_assoc($dbres) ) 
 			$result['players'][ $player['id'] ] = $player;
@@ -235,7 +238,7 @@ class Tichu extends Table {
         self::setGameStateValue( 'grandTichuPasses', $grandTichuPasses);
         if ($grandTichuPasses < 4)
         {
-            $this->gamestate->nextState( 'passGrandTichu' ); // Next player
+            $this->gamestate->nextState( 'nextGrandTichu' ); // Next player
         }
         else
         {
@@ -243,15 +246,31 @@ class Tichu extends Table {
         }
     }
 	function callGrandTichu()
-    {
-        //todo save call
+    { // More than 1 player can call Grand Tichu!
+        // In player table, set player_call_grand_tichu to 1
+		  $player_id = self::getActivePlayerId();
+		  $sql="UPDATE player SET player_call_grand_tichu='1' WHERE player_id='$player_id'";
+		  self::DbQuery( $sql );
 
         self::notifyAllPlayers( 'grandTichuCall',
             clienttranslate('${player_name} calls Grand Tichu'), array(
+				'player_id' => $player_id,
             'player_name' => self::getActivePlayerName()
             ) );
+        
+        // Change player's name, adding " (Grand Tichu)"
 
-        $this->gamestate->nextState( 'grandTichuCalled' ); 
+        $grandTichuPasses = self::getGameStateValue( 'grandTichuPasses');
+        $grandTichuPasses = $grandTichuPasses + 1;
+        self::setGameStateValue( 'grandTichuPasses', $grandTichuPasses);
+        if ($grandTichuPasses < 4)
+        {
+            $this->gamestate->nextState( 'nextGrandTichu' ); // Next player
+        }
+        else
+        {
+            $this->gamestate->nextState( 'allSkipped' );
+        }
     }
 	function passPlay(){ // Press Pass button, skip turn
 		self::checkAction( "passPlay" );
@@ -461,7 +480,7 @@ class Tichu extends Table {
             $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
             $i18n = array( 'value_displayed' ); //check if needed
         }
-        else if ($playType == 1) //triples
+        else if ($playType == 2) //triples
         {
             $displayText = clienttranslate('${player_name} plays a triple ${value_displayed}');
             $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];

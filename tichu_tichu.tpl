@@ -28,6 +28,7 @@
 	<div class="playertable whiteblock playertable_{DIR}">
 		<div class="playertablename" style="color:#{PLAYER_COLOR}">
 			{PLAYER_NAME}
+			<div class="playertichucall" id="playertichucall_{PLAYER_ID}"></div>
 		</div>
 		<div class="playertablecards" id="playertablecard_{PLAYER_ID}">
 		</div>
@@ -42,5 +43,6 @@
 <script>
 	var jstpl_cardontable = '<div class="cardontable" id="cardontable_${player_id}_${card_id}" style="background-position:-${x}px -${y}px;z-index:${z};">\
 		</div>';
+	//var jstpl_tichucall = '<div class="tichucall" id="tichucall_${player_id}" style="z-index=100;">${text}</div>';
 </script>  
 {OVERALL_GAME_FOOTER}

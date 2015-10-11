@@ -76,7 +76,7 @@ $machinestates = array(
 	  "descriptionmyturn" => clienttranslate('${you} must choose to call Grant Tichu or Pass'),
 	  "type" => "activeplayer",
 	  "possibleactions" => array( "callGrandTichu", "passGrandTichu" ),
-	  "transitions" => array( "grandTichuCalled" => 130, "passGrandTichu" => 125, "allSkipped" => 130)        
+	  "transitions" => array( "nextGrandTichu" => 125, "allSkipped" => 130)        
 	),
     125 => array(       
 	  "name" => "nextPlayerDeclareGrandTichu",
