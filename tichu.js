@@ -257,6 +257,8 @@ function (dojo, declare) {
 			        //  }, this, function( result ) {  }, function( is_error) { } );                        
 			        //this.playerHand.unselectAll();
 			    } else if (this.checkAction('passCards')) {
+
+                    //todo - get correct direction, move first card chosen to left, then right, then middle. Don't allow a fourth.
 			        console.log("passCards");
 			        console.log(items[0]);
 			        console.log(this.players);
