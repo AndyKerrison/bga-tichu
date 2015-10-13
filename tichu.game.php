@@ -830,16 +830,16 @@ class Tichu extends Table {
 	}
 	function stEndHand() { // Count and score points, then end the game or go to the next hand.
         self::debug("stEndHand");
-		// $players = self::loadPlayersBasicInfos();
+		$players = self::loadPlayersBasicInfos();
 		
-		// // Gets all "hearts" + queen of spades
-		// $player_with_queen_of_spades = null;
-		// $player_to_hearts = array();
-		// $player_to_points = array();
-		// foreach( $players as $player_id => $player ) {
-		// 	$player_to_hearts[ $player_id ] = 0;
-		// 	$player_to_points[ $player_id ] = 0;
-		// }   
+		// Get all point cards: 5,10,K(13),Phoenix(3,type:1),Dragon(15)
+		$player_with_queen_of_spades = null;
+		$player_to_hearts = array();
+		$player_to_points = array();
+		foreach( $players as $player_id => $player ) {
+			$player_to_hearts[ $player_id ] = 0;
+			$player_to_points[ $player_id ] = 0;
+		}   
 		
 		// $cards = $this->getCardsInLocation( "cardswon" );
 		// foreach( $cards as $card ) {
