@@ -24,6 +24,8 @@ function (dojo, declare) {
 			this.playerHand = null;
 			this.cardwidth  = 73;
 			this.cardheight = 98;
+			this.players = null;
+		    this.cardsToPass = [];
 		},
 		/* setup:
 			This method must set up the game UI according to current game situation specified in parameter.
@@ -32,9 +34,12 @@ function (dojo, declare) {
 				_ when a player refresh the game page (F5)
 			"gamedatas" argument contains all datas retrieved by your "getAllDatas" in tichu.game.php:128
 		*/
-		setup: function( gamedatas ) {
+		setup: function (gamedatas) {
+		    this.players = [];
+		    
 			console.log( "start creating player boards" );
-			for ( var player_id in gamedatas.players ) { 
+			for (var player_id in gamedatas.players) {
+			    this.players.push(player_id);
 				var player = gamedatas.players[player_id]; // Get 1st person player
 				if (player.call_tichu == 1) {
 					dojo.place('<label id="lblCallTichu">Tichu!</label>', 'playertichucall_'+player_id );
@@ -48,7 +53,7 @@ function (dojo, declare) {
 			this.playerHand.create( this, $('myhand'), this.cardwidth, this.cardheight );
 			this.playerHand.image_items_per_row = 14;
 			// Player Hand selection event handler not needed (yet?)
-			//dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' ); 
+			dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' ); 
 			// Create cards types:
 			for( var color=1;color<=4;color++ ) {
 				for( var value=1;value<=14;value++ ) { // Build card type id
@@ -61,6 +66,7 @@ function (dojo, declare) {
 				var card = this.gamedatas.hand[i];
 				var color = card.type;
 				var value = card.type_arg;
+			    console.log("addToStockWithID: " + this.getCardUniqueId(color, value) + " - " + card.id);
 				this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id ); }
 			// Cards played on table, display these
 			for( i in this.gamedatas.cardsontable ) { // iterate through and show all cards on table
@@ -117,8 +123,9 @@ function (dojo, declare) {
 			            this.addActionButton('passGrandTichu_button', _('Pass'), 'onPassGrandTichu');
 			            this.addActionButton('callGrandTichu_button', _('Call Grand Tichu'), 'onCallGrandTichu');
                         break;
-					case 'giveCards':
-						this.addActionButton('giveCards_button', _('Give selected cards'), 'onGiveCards' );
+					case 'passCards':
+					    this.addActionButton('passCards_button', _('Pass selected cards'), 'onPassCards');
+					    this.addActionButton('resetPassCards_button', _('Reset choices'), 'onResetPassCards');
 						break;
 					case 'playerTurn':
 						this.addActionButton('passPlay_button', _('Pass'), 'onPassPlay' );
@@ -163,6 +170,10 @@ function (dojo, declare) {
 	    //get card value based on it's unique identifier
         getCardValueByTypeID: function(cardTypeID) {
             return (cardTypeID % 14) + 1;
+        },
+	    //get card color based on it's unique identifier
+        getCardColorByTypeID: function (cardTypeID) {
+            return 1+((cardTypeID - (cardTypeID % 14)) / 14);
         },
 		// Get card unique identifier based on its color and value
 		getCardUniqueId: function( color, value ){
@@ -237,17 +248,64 @@ function (dojo, declare) {
 		onPlayerHandSelectionChanged: function() {
 			var items = this.playerHand.getSelectedItems();//debugger;
 			if( items.length > 0 ) { // Can use this to do active checking whether play is possible
-			    if( this.checkAction('playCards',true) ) { // Needs to select 1 or more cards
-			       // Can play a card
-			       //var card_id = items[0].id;
-			       //this.ajaxcall( "/tichu/tichu/playCards.html", { 
-			       //  //id: card_id,
-			       //  cards: card_id,
-			       //  lock: true 
-			       //  }, this, function( result ) {  }, function( is_error) { } );                        
-			       //this.playerHand.unselectAll();
-			    } else if( this.checkAction('giveCards') ) {
-			       // Can give cards => let the player select some cards
+			    if (this.checkAction('playCards', true)) { // Needs to select 1 or more cards
+			        console.log("playCards");
+			    } else if (this.checkAction('passCards')) {
+
+			        var player_id = this.player_id;
+			        var direction;
+			        if (this.cardsToPass.length == 0) //left
+			        {
+			            direction = "W";
+			        }
+			        else if (this.cardsToPass.length == 1) //right
+			        {
+			            direction = "E";
+			        }
+			        else if (this.cardsToPass.length == 2) //across
+			        {
+			            direction = "N";
+			        }
+			        else {
+			            //only 3 cards! bail out.
+			            this.playerHand.unselectAll();
+			            return;
+                    }
+			        
+			        var topOffset = 50;//(10 * plays_order);
+			        var leftOffset = 115;//(12 * cards_order) + (10 * plays_order);
+			        var z = 20;//(1 * cards_order) + (20 * plays_order);
+			        var value = this.getCardValueByTypeID(items[0].type);
+			        var color = this.getCardColorByTypeID(items[0].type);
+			        console.log("value " + value);
+			        console.log("color " + color);
+			        var card_id = items[0].id;
+			        this.cardsToPass.push(items[0]);
+			        console.log(card_id);
+			        console.log(player_id);
+			        var x = this.cardwidth * (value - 1);
+			        var y = this.cardheight * (color - 1);
+
+			        console.log("creating");
+			        dojo.place( // This inserts HTML with variable parameters onto a player's hand
+                        this.format_block('jstpl_cardontable', { // x,y = tichu-cards.png (css background-position)
+                            x: x,	// width:  73px
+                            y: y,	// height: 98px
+                            z: z, // z-index (what card is on top)
+                            player_id: player_id,
+                            card_id: card_id
+                        }), 'playertablecard_' + player_id);
+
+			        if ($('myhand_item_' + card_id)) {
+			            console.log("placing");
+			                this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
+			                this.playerHand.removeFromStockById(card_id);
+			            } else {
+			                console.log('Failed to remove card from hand');
+			            }
+			        
+			        this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertable_' + direction, leftOffset, topOffset).play();
+
 			    } else {
 			       this.playerHand.unselectAll();
 			    }                
@@ -309,20 +367,47 @@ function (dojo, declare) {
 				{ cards: to_play, lock: true }, this, function(result){}, function(is_error){} );
 			this.playerHand.unselectAll(); // Might not be necessary
 		},
-		onGiveCards: function() {
-			if( this.checkAction('giveCards') ) {
-				var items = this.playerHand.getSelectedItems();
-				if( items.length !== 3 ) {
+		onResetPassCards: function () {
+		    if (this.checkAction('passCards')) {
+
+		        //this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
+		        //this.playerHand.removeFromStockById(card_id);
+		        for (var i = 0; i < this.cardsToPass.length; i++) {
+		            var card_id = this.cardsToPass[i].id;
+		            var player_id = this.player_id;
+		            console.log("attempting to cancel " + player_id + "_" + card_id);
+		            var test = $('cardontable_' + player_id + '_' + card_id);
+		            var test2 = $('overall_player_board_' + player_id);
+		            console.log(test);
+		            console.log(test2);
+		            this.slideToObjectAndDestroy('cardontable_' + player_id + '_' + card_id, 'myhand', 1000, 0);
+		            this.playerHand.addToStockWithId(this.cardsToPass[i].type, this.cardsToPass[i].id);
+		        }
+
+		        this.cardsToPass = [];
+		    } 
+		},
+		onPassCards: function () {
+            if (this.checkAction('passCards')) {
+	    		        console.log("passing cards");
+		        var items = this.cardsToPass;
+		        if( items.length !== 3 ) {
 					this.showMessage( _("You must select exactly 3 cards"), 'error' );
 					return;
-				}
-				// Give these 3 cards
+		        }
+
+                // Give these 3 cards
 				var to_give = '';
-				for( var i in items ) {
-					to_give += items[i].id+';'; }
+				for (var i in items) {
+				    dojo.destroy('cardontable_' + this.player_id + '_' + items[i].id);
+				    to_give += items[i].id+';';
+				}
+		        console.log("passing: " + to_give);
 				this.ajaxcall("/tichu/tichu/giveCards.html", { 
-					cards:to_give, lock:true }, this, function(result){}, function(is_error){} );
-			}        
+				    cards: to_give, lock: true
+				}, this, function (result) { }, function (is_error) { });
+                    
+		    }
 		},
 		onCallGrandTichu: function () {
 		    if (this.checkAction('callGrandTichu')) {
