@@ -540,7 +540,12 @@ class Tichu extends Table {
 	}
 	function giveCards( $card_ids ) { // Give some cards (before the hands begin)
         self::debug("giveCards");
-		self::checkAction( "giveCards" );
+		self::checkAction( "passCards" );
+
+        //todo - pass the cards
+        $player_id = self::getCurrentPlayerId();
+        $this->gamestate->setPlayerNonMultiactive( $player_id, "passCards" );
+        return;
 		// !! Here we have to get CURRENT player (= player who send the request) and not
 		//    active player, cause we are in a multiple active player state and the "active player"
 		//    correspond to nothing.

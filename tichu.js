@@ -24,7 +24,8 @@ function (dojo, declare) {
 			this.playerHand = null;
 			this.cardwidth  = 73;
 			this.cardheight = 98;
-		    this.players = null;
+			this.players = null;
+		    this.cardsToPass = [];
 		},
 		/* setup:
 			This method must set up the game UI according to current game situation specified in parameter.
@@ -65,6 +66,7 @@ function (dojo, declare) {
 				var card = this.gamedatas.hand[i];
 				var color = card.type;
 				var value = card.type_arg;
+			    console.log("addToStockWithID: " + this.getCardUniqueId(color, value) + " - " + card.id);
 				this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id ); }
 			// Cards played on table, display these
 			for( i in this.gamedatas.cardsontable ) { // iterate through and show all cards on table
@@ -263,7 +265,30 @@ function (dojo, declare) {
 			        console.log(items[0]);
 			        console.log(this.players);
 
-			        var player_id = this.players[0];
+			        //we have list of players. left = before us, right = after us
+			        var player_id = this.player_id;
+			        var targetPlayer_id;
+			        for (var i = 0; i < this.players.length; i++) {
+			            if (this.player_id == this.players[i]) {
+			                if (this.cardsToPass.length == 0) //left
+			                {
+			                    targetPlayer_id = this.players[(i + 1) % 4];
+			                }
+			                else if (this.cardsToPass.length == 1) //right
+			                {
+			                    targetPlayer_id = this.players[(i + 3) % 4];
+			                }
+			                else if (this.cardsToPass.length == 2) //across
+			                {
+			                    targetPlayer_id = this.players[(i + 2) % 4];
+			                } else {
+			                    //only 3 cards! bail out.
+			                    this.playerHand.unselectAll();
+			                    return;
+			                }
+			            }
+                    }
+			       
 			        //console.log("playing card with ID " + card_id + ", card order " + cards_order + ", play order " + plays_order);
 			        //cards_order = typeof cards_order !== 'undefined' ? cards_order : 1; // If null, assign 1
 			        //plays_order = typeof plays_order !== 'undefined' ? plays_order : 1; // If null, assign 1
@@ -281,6 +306,7 @@ function (dojo, declare) {
 			        console.log("value " + value);
 			        console.log("color " + color);
 			        var card_id = items[0].id;
+			        this.cardsToPass.push(items[0]);
 			        console.log(card_id);
 			        console.log(player_id);
 			        var x = this.cardwidth * (value - 1);
@@ -310,7 +336,7 @@ function (dojo, declare) {
 
 			        // In any case: move it to its final destination
 			        console.log("moving");
-			        this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertablecard_' + player_id, leftOffset, topOffset).play();
+			        this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertablecard_' + targetPlayer_id, leftOffset, topOffset).play();
 
 			    } else {
 			       this.playerHand.unselectAll();
@@ -373,27 +399,25 @@ function (dojo, declare) {
 				{ cards: to_play, lock: true }, this, function(result){}, function(is_error){} );
 			this.playerHand.unselectAll(); // Might not be necessary
 		},
-        //todo - check cards have been chosen for the 3 positions. Confirm them as passed, remove from table
-		onPassCards: function() {
-			if( this.checkAction('passCards') ) {
-			/*	var items = this.playerHand.getSelectedItems();
-				if( items.length !== 3 ) {
-					this.showMessage( _("You must select exactly 3 cards"), 'error' );
-					return;
-				}
-				// Give these 3 cards
-				var to_give = '';
-				for( var i in items ) {
-					to_give += items[i].id+';'; }
-				this.ajaxcall("/tichu/tichu/giveCards.html", { 
-					cards:to_give, lock:true }, this, function(result){}, function(is_error){} );
-                    */
-			}       
-		},
-        //todo - return the cards to the player's hand
 		onResetPassCards: function () {
-		    if( this.checkAction('passCards') ) {
-				/*var items = this.playerHand.getSelectedItems();
+		    if (this.checkAction('passCards')) {
+
+		        //this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
+		        //this.playerHand.removeFromStockById(card_id);
+		        for (var i = 0; i < this.cardsToPass.length; i++) {
+		            var card_id = this.cardsToPass[i].id;
+		            var player_id = this.player_id;
+		            console.log("attempting to cancel " + player_id + "_" + card_id);
+		            var test = $('cardontable_' + player_id + '_' + card_id);
+		            var test2 = $('overall_player_board_' + player_id);
+		            console.log(test);
+		            console.log(test2);
+		            this.slideToObjectAndDestroy('cardontable_' + player_id + '_' + card_id, 'myhand', 1000, 0);
+		            this.playerHand.addToStockWithId(this.cardsToPass[i].type, this.cardsToPass[i].id);
+		        }
+
+		        this.cardsToPass = [];
+		        /*var items = this.playerHand.getSelectedItems();
 				if( items.length !== 3 ) {
 					this.showMessage( _("You must select exactly 3 cards"), 'error' );
 					return;
@@ -405,7 +429,27 @@ function (dojo, declare) {
 				this.ajaxcall("/tichu/tichu/giveCards.html", { 
 					cards:to_give, lock:true }, this, function(result){}, function(is_error){} );
                     */
-			} 
+		    } 
+		},
+	    //todo - check cards have been chosen for the 3 positions. Confirm them as passed, remove from table
+		onPassCards: function () {
+		    if (this.checkAction('passCards')) {
+		        var items = this.cardsToPass;
+		        if( items.length !== 3 ) {
+					this.showMessage( _("You must select exactly 3 cards"), 'error' );
+					return;
+		        }
+
+                // Give these 3 cards
+				var to_give = '';
+				for( var i in items ) {
+				    to_give += items[i].id+';';
+				}
+				this.ajaxcall("/tichu/tichu/giveCards.html", { 
+				    cards: to_give, lock: true
+				}, this, function (result) { }, function (is_error) { });
+                    
+		    }
 		},
 		onCallGrandTichu: function () {
 		    if (this.checkAction('callGrandTichu')) {
