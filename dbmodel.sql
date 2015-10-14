@@ -19,10 +19,12 @@
 -- Note: The database schema is created from this file when the game starts. If you modify this file,
 --       you have to restart a game to see your changes in database.
 
--- add info about first player
+-- add items to database
 ALTER TABLE `player` ADD `player_first` BOOLEAN NOT NULL DEFAULT '0';
 ALTER TABLE `player` ADD `player_team` int(3) NOT NULL DEFAULT '-1';
 ALTER TABLE `player` ADD `player_maxscore` int(7) NOT NULL DEFAULT '1000';
+ALTER TABLE `player` ADD `player_call_tichu` BOOLEAN NOT NULL DEFAULT '0';
+ALTER TABLE `player` ADD `player_call_grand_tichu` BOOLEAN NOT NULL DEFAULT '0';
 
 CREATE TABLE IF NOT EXISTS `card` (
   `card_id` int(10) unsigned NOT NULL AUTO_INCREMENT,	

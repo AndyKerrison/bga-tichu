@@ -34,8 +34,15 @@ function (dojo, declare) {
 		*/
 		setup: function( gamedatas ) {
 			console.log( "start creating player boards" );
-			for ( var player_id in gamedatas.players ) { // Get 1st person player
-				var player = gamedatas.players[player_id]; }
+			for ( var player_id in gamedatas.players ) { 
+				var player = gamedatas.players[player_id]; // Get 1st person player
+				if (player.call_tichu == 1) {
+					dojo.place('<label id="lblCallTichu">Tichu!</label>', 'playertichucall_'+player_id );
+				}
+				else if (player.call_grand_tichu == 1) {
+					dojo.place('<label id="lblCallTichu">Grand Tichu!</label>', 'playertichucall_'+player_id );
+				}
+			}
 			// Player hand
 			this.playerHand = new ebg.stock();
 			this.playerHand.create( this, $('myhand'), this.cardwidth, this.cardheight );
@@ -362,9 +369,28 @@ function (dojo, declare) {
 			dojo.subscribe( 'newScores', this, "notif_newScores" );
 			dojo.subscribe( 'giveCards', this, "notif_giveCards" );
 			dojo.subscribe( 'takeCards', this, "notif_takeCards" );
+			dojo.subscribe( 'grandTichuCall', this, "notif_callGrandTichu" );
 		},
 		
 	    // TODO: from this point and below, you can write your game notifications handling methods
+		notif_callGrandTichu: function (notif) { 
+			// Add to player's name on game table
+			player_id=notif.args.player_id;
+			// player_name=notif.args.player_name;
+			// Add a label that can be removed on new hand
+			//dojo.place( "<label class='lblGT'> (Grand Tichu)</label>", )
+			// Slide or place a "GT" icon on players table
+			console.log('GT call by:'+player_id);
+			dojo.place( // This inserts HTML with variable parameters onto a player's table
+				'<label id="lblCallTichu">Grand Tichu!</label>', 'playertichucall_'+player_id );
+		    // Move Tichu call (logo or text) from player panel
+			// this.placeOnObject('tichucall'+player_id+'_'+card_id,'overall_player_board_'+player_id);
+
+            // move it to its final destination
+			// this.slideToObjectPos('tichucall'+player_id+'_'+card_id,'playertichucall_'+player_id,leftOffset, topOffset).play();
+
+
+		},
 		notif_addToHand: function (notif) { // We received the last 6 cards.
 		    
 		    //Create a pile of cards, and deal 14 to each player
