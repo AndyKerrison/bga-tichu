@@ -62,4 +62,14 @@ class action_tichu extends APP_GameAction {
 		$this->game->passPlay();
 		self::ajaxResponse( );    
 	}
+    public function callGrandTichu() {
+		self::setAjaxMode();     
+		$this->game->callGrandTichu();
+		self::ajaxResponse( );    
+	}
+    public function passGrandTichu() {
+		self::setAjaxMode();     
+		$this->game->passGrandTichu();
+		self::ajaxResponse( );    
+	}
 }

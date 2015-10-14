@@ -65,14 +65,32 @@ $machinestates = array(
 	  "transitions" => array( "" => 21 )
 	),
 	21 => array(       
-	  "name" => "giveCards",
-	  "description" => clienttranslate('Some players must choose 3 cards to give to ${direction}'),
-	  "descriptionmyturn" => clienttranslate('${you} must choose 3 cards to give to ${direction}'),
-	  "type" => "multipleactiveplayer",
+	  "name" => "giveCards1",
+	   "type" => "game",
 	  "action" => "stGiveCards",
-	  "args" => "argGiveCards",
-	  "possibleactions" => array( "giveCards" ),
-	  "transitions" => array( "giveCards" => 22, "skip" => 22 )        
+	  "transitions" => array( "cardsDealt" => 120)        
+	),
+    120 => array(       
+	  "name" => "declareGrandTichu",
+	  "description" => clienttranslate('${actplayer} must choose to call Grand Tichu or Pass'),
+	  "descriptionmyturn" => clienttranslate('${you} must choose to call Grant Tichu or Pass'),
+	  "type" => "activeplayer",
+	  "possibleactions" => array( "callGrandTichu", "passGrandTichu" ),
+	  "transitions" => array( "grandTichuCalled" => 130, "passGrandTichu" => 125, "allSkipped" => 130)        
+	),
+    125 => array(       
+	  "name" => "nextPlayerDeclareGrandTichu",
+      "type" => "game",
+      "action" => "stNextPlayerDeclareGrandTichu",
+	  "transitions" => array( "" => 120)        
+	),
+    130 => array(       
+	  "name" => "passCards",
+	  "type" => "multipleactiveplayer",
+      "action" => "stPassCards",
+      "descriptionmyturn" => clienttranslate('${you} must pass a card left, right, and across'),
+      "possibleactions" => array( "passCards" ),
+      "transitions" => array( "passCards" => 22)        
 	),
 	22 => array(
 	  "name" => "takeCards",
