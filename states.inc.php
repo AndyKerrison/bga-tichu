@@ -88,6 +88,7 @@ $machinestates = array(
 	  "name" => "passCards",
 	  "type" => "multipleactiveplayer",
       "action" => "stPassCards",
+      "description" => clienttranslate('Waiting for other players to pass cards'),
       "descriptionmyturn" => clienttranslate('${you} must pass a card left, right, and across'),
       "possibleactions" => array( "passCards" ),
       "transitions" => array( "passCards" => 22)        

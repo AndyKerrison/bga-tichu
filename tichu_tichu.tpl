@@ -25,7 +25,7 @@
 <div id="playertables">
 	<div id="dealingstack"></div>
 	<!-- BEGIN player -->
-	<div class="playertable whiteblock playertable_{DIR}">
+	<div id="playertable_{DIR}" class="playertable whiteblock playertable_{DIR}">
 		<div class="playertablename" style="color:#{PLAYER_COLOR}">
 			{PLAYER_NAME}
 			<div class="playertichucall" id="playertichucall_{PLAYER_ID}"></div>

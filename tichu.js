@@ -250,56 +250,30 @@ function (dojo, declare) {
 			if( items.length > 0 ) { // Can use this to do active checking whether play is possible
 			    if (this.checkAction('playCards', true)) { // Needs to select 1 or more cards
 			        console.log("playCards");
-			        // Can play a card
-			        //var card_id = items[0].id;
-			        //this.ajaxcall( "/tichu/tichu/playCards.html", { 
-			        //  //id: card_id,
-			        //  cards: card_id,
-			        //  lock: true 
-			        //  }, this, function( result ) {  }, function( is_error) { } );                        
-			        //this.playerHand.unselectAll();
 			    } else if (this.checkAction('passCards')) {
 
-                    //todo - get correct direction, move first card chosen to left, then right, then middle. Don't allow a fourth.
-			        console.log("passCards");
-			        console.log(items[0]);
-			        console.log(this.players);
-
-			        //we have list of players. left = before us, right = after us
 			        var player_id = this.player_id;
-			        var targetPlayer_id;
-			        for (var i = 0; i < this.players.length; i++) {
-			            if (this.player_id == this.players[i]) {
-			                if (this.cardsToPass.length == 0) //left
-			                {
-			                    targetPlayer_id = this.players[(i + 1) % 4];
-			                }
-			                else if (this.cardsToPass.length == 1) //right
-			                {
-			                    targetPlayer_id = this.players[(i + 3) % 4];
-			                }
-			                else if (this.cardsToPass.length == 2) //across
-			                {
-			                    targetPlayer_id = this.players[(i + 2) % 4];
-			                } else {
-			                    //only 3 cards! bail out.
-			                    this.playerHand.unselectAll();
-			                    return;
-			                }
-			            }
+			        var direction;
+			        if (this.cardsToPass.length == 0) //left
+			        {
+			            direction = "W";
+			        }
+			        else if (this.cardsToPass.length == 1) //right
+			        {
+			            direction = "E";
+			        }
+			        else if (this.cardsToPass.length == 2) //across
+			        {
+			            direction = "N";
+			        }
+			        else {
+			            //only 3 cards! bail out.
+			            this.playerHand.unselectAll();
+			            return;
                     }
-			       
-			        //console.log("playing card with ID " + card_id + ", card order " + cards_order + ", play order " + plays_order);
-			        //cards_order = typeof cards_order !== 'undefined' ? cards_order : 1; // If null, assign 1
-			        //plays_order = typeof plays_order !== 'undefined' ? plays_order : 1; // If null, assign 1
-			        // cards_order affects Left     (Card #1-14; multiple cards in one play)
-			        // plays_order affects Top&Left (Play #1-14; multiple plays in one trick)
-
-			        // The below are all for final placement
-			        //plays_order = plays_order - 1; //because we want first one aligned with template div
-			        //cards_order = cards_order - 1;
-			        var topOffset = 0;//(10 * plays_order);
-			        var leftOffset = 0;//(12 * cards_order) + (10 * plays_order);
+			        
+			        var topOffset = 50;//(10 * plays_order);
+			        var leftOffset = 115;//(12 * cards_order) + (10 * plays_order);
 			        var z = 20;//(1 * cards_order) + (20 * plays_order);
 			        var value = this.getCardValueByTypeID(items[0].type);
 			        var color = this.getCardColorByTypeID(items[0].type);
@@ -311,8 +285,7 @@ function (dojo, declare) {
 			        console.log(player_id);
 			        var x = this.cardwidth * (value - 1);
 			        var y = this.cardheight * (color - 1);
-			        // player_id => direction
-			        // See tichu_tichu.tpl for manifestation of placing cards
+
 			        console.log("creating");
 			        dojo.place( // This inserts HTML with variable parameters onto a player's hand
                         this.format_block('jstpl_cardontable', { // x,y = tichu-cards.png (css background-position)
@@ -322,9 +295,7 @@ function (dojo, declare) {
                             player_id: player_id,
                             card_id: card_id
                         }), 'playertablecard_' + player_id);
-			        console.log("created");
-			            // You played cards. If exists in hand, move cards from hand to table, remove hand item
-			            // Verify it exists in 1st person's hand
+
 			        if ($('myhand_item_' + card_id)) {
 			            console.log("placing");
 			                this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
@@ -333,10 +304,7 @@ function (dojo, declare) {
 			                console.log('Failed to remove card from hand');
 			            }
 			        
-
-			        // In any case: move it to its final destination
-			        console.log("moving");
-			        this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertablecard_' + targetPlayer_id, leftOffset, topOffset).play();
+			        this.slideToObjectPos('cardontable_' + player_id + '_' + card_id, 'playertable_' + direction, leftOffset, topOffset).play();
 
 			    } else {
 			       this.playerHand.unselectAll();
@@ -417,23 +385,11 @@ function (dojo, declare) {
 		        }
 
 		        this.cardsToPass = [];
-		        /*var items = this.playerHand.getSelectedItems();
-				if( items.length !== 3 ) {
-					this.showMessage( _("You must select exactly 3 cards"), 'error' );
-					return;
-				}
-				// Give these 3 cards
-				var to_give = '';
-				for( var i in items ) {
-					to_give += items[i].id+';'; }
-				this.ajaxcall("/tichu/tichu/giveCards.html", { 
-					cards:to_give, lock:true }, this, function(result){}, function(is_error){} );
-                    */
 		    } 
 		},
-	    //todo - check cards have been chosen for the 3 positions. Confirm them as passed, remove from table
 		onPassCards: function () {
-		    if (this.checkAction('passCards')) {
+            if (this.checkAction('passCards')) {
+	    		        console.log("passing cards");
 		        var items = this.cardsToPass;
 		        if( items.length !== 3 ) {
 					this.showMessage( _("You must select exactly 3 cards"), 'error' );
@@ -442,9 +398,11 @@ function (dojo, declare) {
 
                 // Give these 3 cards
 				var to_give = '';
-				for( var i in items ) {
+				for (var i in items) {
+				    dojo.destroy('cardontable_' + this.player_id + '_' + items[i].id);
 				    to_give += items[i].id+';';
 				}
+		        console.log("passing: " + to_give);
 				this.ajaxcall("/tichu/tichu/giveCards.html", { 
 				    cards: to_give, lock: true
 				}, this, function (result) { }, function (is_error) { });

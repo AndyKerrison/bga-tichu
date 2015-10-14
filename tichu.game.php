@@ -542,14 +542,11 @@ class Tichu extends Table {
         self::debug("giveCards");
 		self::checkAction( "passCards" );
 
-        //todo - pass the cards
-        $player_id = self::getCurrentPlayerId();
-        $this->gamestate->setPlayerNonMultiactive( $player_id, "passCards" );
-        return;
-		// !! Here we have to get CURRENT player (= player who send the request) and not
+        // !! Here we have to get CURRENT player (= player who send the request) and not
 		//    active player, cause we are in a multiple active player state and the "active player"
 		//    correspond to nothing.
-		$player_id = self::getCurrentPlayerId();
+        $player_id = self::getCurrentPlayerId();
+
 		if( count( $card_ids ) != 3 )
 			throw new feException( self::_("You must give exactly 3 cards") );
 		// Check if these cards are in player hands
@@ -559,32 +556,38 @@ class Tichu extends Table {
 		foreach( $cards as $card ) { // Verify cards are in correct player's hand
 			if( $card['location'] != 'hand' || $card['location_arg'] != $player_id )
 				throw new feException( self::_("Some of these cards are not in your hand") ); }
-		
+
 		// To which player should I give these cards ?
 		$player_to_give_cards = null;
 		$player_to_direction = self::getPlayersToDirection();   // Note: current player is on the south
-		//$handType = self::getGameStateValue( "currentHandType" );
-		//if( $handType == 0 )
-		//	$direction = 'W';
-		//else if( $handType == 1 )
-		//	$direction = 'N';
-		//else if( $handType == 2 )
-		//	$direction = 'E';
-		foreach( $player_to_direction as $opponent_id => $opponent_direction ) {
-			if( $opponent_direction == $direction )
-				$player_to_give_cards = $opponent_id; }
-		if( $player_to_give_cards === null )
-			throw new feException( self::_("Error while determining to who give the cards") );
-		// Allright, these cards can be given to this player
-		// (note: we place the cards in some temporary location in order he can't see them before the hand starts)
+
+        for ($index = 0; $index<3; $index++)
+        {
+            if( $index == 0 ) $direction = 'W';
+            else if( $index == 1 ) $direction = 'E';
+            else if ( $index == 2 ) $direction = 'N';
+
+            self::debug("Direction:".$direction);
+            foreach( $player_to_direction as $opponent_id => $opponent_direction )
+            {
+                if( $opponent_direction == $direction )
+                {
+                    $player_to_give_cards = $opponent_id;
+                    self::debug("Giving card ".$card_ids[$index]." to ".$player_to_give_cards."(".$direction.")");
+                    $this->cards->moveCard( $card_ids[$index], "temporary", $player_to_give_cards );
+                }               
+            }
+            if( $player_to_give_cards === null )
+                throw new feException( self::_("Error while determining to who give the cards") );
+        }
+        // (note: we place the cards in some temporary location in order he can't see them before the hand starts)
 		// This updates database, notifyPlayer below does visuals
-		// Need to switch this to 3 moveCards, 1 to each player
-		$this->cards->moveCards( $card_ids, "temporary", $player_to_give_cards );
-		// Notify the player so we can make these cards disapear
-		self::notifyPlayer( $player_id, "giveCards", "", array( "cards" => $card_ids ) );
-		// Make this player unactive now
-		// (and tell the machine state to use transtion "giveCards" if all players are now unactive
-		$this->gamestate->setPlayerNonMultiactive( $player_id, "giveCards" );
+				
+        // Notify the player so we can make these cards disapear
+		//self::notifyPlayer( $player_id, "giveCards", "", array( "cards" => $card_ids ) );
+
+        //go to the next 'pass cards' state
+        $this->gamestate->setPlayerNonMultiactive( $player_id, "passCards" );
 	}
     
 //////////////////////////////////////////////////////////////////////////////
