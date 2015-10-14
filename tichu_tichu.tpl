@@ -23,6 +23,7 @@
 	Need to add # of cards in hand next to name: player1 (14)
 -->
 <div id="playertables">
+	<div id="dealingstack"></div>
 	<!-- BEGIN player -->
 	<div class="playertable whiteblock playertable_{DIR}">
 		<div class="playertablename" style="color:#{PLAYER_COLOR}">

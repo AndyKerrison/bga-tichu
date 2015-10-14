@@ -75,6 +75,11 @@
 	top: 50%;
 	margin-top: -55px; /* half of 130 */
 }
+#dealingstack {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
 .playertablecards {
 	display: inline-flex;/*inline-block*/
 	position: /*static;*/absolute;
