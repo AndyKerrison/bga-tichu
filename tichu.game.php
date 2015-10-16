@@ -405,7 +405,7 @@ class Tichu extends Table {
                 if ($playType>-1 && $playType != 2) // If the current play type is not first play/doubles
 					throw new feException( 'Must play a higher card of type: '.$this->play_type[$playType] );
                 
-                $playType = 1;
+                $playType = 2;
                 $playValue=$playCards[0]['type_arg']*10; // Normal cards value
 
                 if ( $maxCardValue >= $playValue ) // Invalid move: play must be higher
@@ -487,6 +487,14 @@ class Tichu extends Table {
             $i18n = array( 'value_displayed' ); //check if needed
         }
 
+        $cardColors = array();
+        $cardValues = array();
+        foreach ($playCards as $card)
+        {
+            array_push($cardValues, $card['type_arg']);
+            array_push($cardColors, $card['type']);
+        }
+
         self::notifyAllPlayers( 
             'playCards', // The notification to call tichu.js:306
             $displayText,
@@ -495,8 +503,8 @@ class Tichu extends Table {
 						'card_ids' => $playCardsIds,
 						'player_id' => $player_id,
 						'player_name' => self::getActivePlayerName(),
-						'value' => $playCards[0]['type_arg'],
-						'color' => $playCards[0]['type'],
+						'value' => $cardValues,
+						'color' => $cardColors,
                         'playValue' => $playValue,
 						'value_displayed' => $displayValue,
 						'cards_order' =>$playCards[0]['cards_order'],
@@ -611,6 +619,14 @@ class Tichu extends Table {
 // function stGameEnd() {}
 	/*  Here, you can create methods defines as "game state actions" (see "action" property in states.inc.php).
 	The action method of state X is called everytime the current game state is set to X.  */
+    function argPlayerTurn()
+    {
+        return array(
+            'playType' => self::getGameStateValue( 'playType' ),
+            'maxCardValue' => self::getGameStateValue( 'maxCardValue' ),
+        );
+    }
+
 	function stNewHand() {
         self::debug("stNewHand");
 		self::incStat( 1, "handNbr" );

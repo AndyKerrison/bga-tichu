@@ -25,7 +25,9 @@ function (dojo, declare) {
 			this.cardwidth  = 73;
 			this.cardheight = 98;
 			this.players = null;
-		    this.cardsToPass = [];
+			this.cardsToPass = [];
+			this.playType = -1;
+		    this.maxCardValue = 0;
 		},
 		/* setup:
 			This method must set up the game UI according to current game situation specified in parameter.
@@ -81,7 +83,6 @@ function (dojo, declare) {
 			}
 		    //if there are no card on table AND passing has not been done, show the dealing also
 			if (this.gamedatas.cardsontable == null || this.gamedatas.cardsontable.length == 0) {
-			    //alert("dealing");
 			    this.dealCards(gamedatas);
 			}
 			this.addTooltipToClass( "playertablecard", _("Card played on the table"), '' );
@@ -99,7 +100,10 @@ function (dojo, declare) {
 		onEnteringState: function( stateName, args )	{
 			console.log( 'Entering state: '+stateName );
 			switch( stateName ) {
-				case 'playerTurn':
+			    case 'playerTurn':
+			        console.log(args);
+			        this.playType = parseInt(args.args.playType);
+			        this.maxCardValue = parseInt(args.args.maxCardValue);
 					this.addTooltip( 'myhand', _('Cards in my hand'), _('Select 1 or more card to play') );
 					break;
 				case 'giveCards':
@@ -164,7 +168,6 @@ function (dojo, declare) {
 		            delay += 125;
 		        }
 		    }*/
-		    //alert("done dealing cards");
 		},
 		
 	    //get card value based on it's unique identifier
@@ -194,7 +197,7 @@ function (dojo, declare) {
 		},
 		// This is called from setup(68) (refresh page & new game) and from tichu.js:notif_playCards(295)
 		playCardOnTable: function (player_id, color, value, card_id, cards_order, plays_order) {
-		    console.log("playing card with ID " + card_id + ", card order " + cards_order + ", play order " + plays_order);
+		    console.log("playing card (" + value + ", " + color + ") with ID " + card_id + ", card order " + cards_order + ", play order " + plays_order);
 			cards_order = typeof cards_order !== 'undefined' ? cards_order : 1; // If null, assign 1
 			plays_order = typeof plays_order !== 'undefined' ? plays_order : 1; // If null, assign 1
 			// cards_order affects Left     (Card #1-14; multiple cards in one play)
@@ -330,37 +333,87 @@ function (dojo, declare) {
 			// 20 = Bomb
 			//
 			// First check if it is a bomb play
-			var playType=0; // For now assume Singles play
-			switch( items.length ) {
-				case 0:		// Can't push Play with no cards selected
-					return; 
-					// break;
-				case 1:		// Singles good play
-					break;
-			    case 2:		// Doubles
-			        if (this.getCardValueByTypeID(items[0].type) == this.getCardValueByTypeID(items[1].type))
-			            playType=1;
-					else {
-						this.showMessage( _("Doubles must match"), 'error' );
-						return; }
-			        break;
-			    case 3:		//Triples
-			        if (this.getCardValueByTypeID(items[0].type) == this.getCardValueByTypeID(items[1].type) &&
-                        this.getCardValueByTypeID(items[1].type) == this.getCardValueByTypeID(items[2].type))
-			            playType = 2;
-			        else {
-			            this.showMessage(_("Doubles must match"), 'error');
-			            return;
-			        }
-			        break;
-				default:
-					this.showMessage( _("Unknown play"), 'error' );
-			} 
+
+		    //AK - I think this is easier to validate by expected play type
+		    //I'll do the non-special cases first...
+
+		    //-1 = Dog (This will actually keep playType at -1 so any type can be played, but not bomb)
+		    //	0 = Singles
+		    //	1 = Doubles
+		    //	2 = Triples
+		    //	3 = Full House
+		    //	4 = Consecutive Doubles
+		    //	5-14 = Run of 5 or more
+		    var playType = this.playType;
+			if (playType == -1) //player choice. Must first figure out the type of play used.
+			{
+                if (items.length == 1) { //singles
+                    playType = 0;
+                }
+                else if (items.length == 2) { //doubles
+                    playType = 1;
+                }
+                else if (items.length == 3) { //triples
+                    playType = 2;
+                } else {
+                    this.showMessage(_("Unrecognised play"), 'error');
+                    return;
+                }
+			}
+		    
+		    switch (playType) {
+		        case 0: //singles
+		            if (items.length != 1) {
+		                this.showMessage(_("Play type is singles"), 'error');
+		                return;
+		            }
+		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		                this.showMessage(_("Must play a higher card"), 'error');
+		                return;
+		            }
+		            break;
+		        case 1: //doubles
+		            if (items.length != 2) {
+		                this.showMessage(_("Play type is doubles"), 'error');
+		                return;
+		            }
+		            else if (this.getCardValueByTypeID(items[0].type) != this.getCardValueByTypeID(items[1].type)) {
+		                this.showMessage(_("Doubles must match"), 'error');
+		                return;
+		            }
+		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		                this.showMessage(_("Must play a higher double"), 'error');
+		                return;
+		            }
+		            break;
+		        case 2: //triples
+		            if (items.length != 3) {
+		                this.showMessage(_("Play type is triples"), 'error');
+		                return;
+		            }
+		            else if (this.getCardValueByTypeID(items[0].type) != this.getCardValueByTypeID(items[1].type) ||
+		                this.getCardValueByTypeID(items[1].type) != this.getCardValueByTypeID(items[2].type)) {
+		                this.showMessage(_("Triples must match"), 'error');
+		                return;
+		            }
+		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		                this.showMessage(_("Must play a higher triple"), 'error');
+		                return;
+		            }
+		            break;
+                default :
+                {
+                    this.showMessage(_("Unhandled play type"), 'error');
+                    return;
+                }
+			}
+
 			// Build Ajax concatenated string collection of card to play
 			var to_play = '';
 			for( var i in items ) {
 				to_play += items[i].id + ';' ;
-			} console.log('to_play:',to_play);
+			} console.log('to_play:', to_play);
+
 			// Send the played cards to server, to be validated by playCards(), this is received back to client 
 			// by the notifyAllPlayers as defined in js:312 & operated on in notif_playCards(js:332) below
 			this.ajaxcall( "/tichu/tichu/playCards.html", 
@@ -369,17 +422,9 @@ function (dojo, declare) {
 		},
 		onResetPassCards: function () {
 		    if (this.checkAction('passCards')) {
-
-		        //this.placeOnObject('cardontable_' + player_id + '_' + card_id, 'myhand_item_' + card_id);
-		        //this.playerHand.removeFromStockById(card_id);
-		        for (var i = 0; i < this.cardsToPass.length; i++) {
+                for (var i = 0; i < this.cardsToPass.length; i++) {
 		            var card_id = this.cardsToPass[i].id;
 		            var player_id = this.player_id;
-		            console.log("attempting to cancel " + player_id + "_" + card_id);
-		            var test = $('cardontable_' + player_id + '_' + card_id);
-		            var test2 = $('overall_player_board_' + player_id);
-		            console.log(test);
-		            console.log(test2);
 		            this.slideToObjectAndDestroy('cardontable_' + player_id + '_' + card_id, 'myhand', 1000, 0);
 		            this.playerHand.addToStockWithId(this.cardsToPass[i].type, this.cardsToPass[i].id);
 		        }
@@ -389,7 +434,7 @@ function (dojo, declare) {
 		},
 		onPassCards: function () {
             if (this.checkAction('passCards')) {
-	    		        console.log("passing cards");
+	    		
 		        var items = this.cardsToPass;
 		        if( items.length !== 3 ) {
 					this.showMessage( _("You must select exactly 3 cards"), 'error' );
@@ -506,7 +551,7 @@ function (dojo, declare) {
 		    console.log('notif_playCards', notif);
 		    x = notif.args;
 		    for (var i = 0; i < x.card_ids.length; i++) {
-		        this.playCardOnTable(x.player_id, x.color, x.value, x.card_ids[i], x.cards_order+i, x.plays_order); // Goto 140
+		        this.playCardOnTable(x.player_id, x.color[i], x.value[i], x.card_ids[i], x.cards_order + i, x.plays_order); // Goto 140
 		    }
 		},
 		notif_trickWin: function( notif ) {

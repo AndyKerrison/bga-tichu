@@ -121,7 +121,7 @@ $machinestates = array(
 	  "description" => clienttranslate('${actplayer} must play a card'),
 	  "descriptionmyturn" => clienttranslate('${you} must play a card'),
 	  "type" => "activeplayer",
-	  //"args" => "argPlayerTurn" // This can be added to validate play on client side (Tichu,Pass,Bomb,PlayType)
+	  "args" => "argPlayerTurn", // This can be added to validate play on client side (Tichu,Pass,Bomb,PlayType)
 	  			// Also used to change description to You must/ You may play a card
 	  			// Add to game.php: function argPlayerTurn(){return array('possibleMoves'=>self::getPossibleMoves);}
 	  "possibleactions" => array( "playCards", "passPlay" ), // These are the buttons on GUI
