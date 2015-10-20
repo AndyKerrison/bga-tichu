@@ -221,6 +221,11 @@ class Tichu extends Table {
 		}
 		if ($arr3) return $arr3;
 	}
+    function getCardPlayValue($card)
+    {
+        //TODO handle special cards
+        return $card['type_arg']*10; 
+    }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Player actions
@@ -304,7 +309,8 @@ class Tichu extends Table {
 		//$bAtLeastOneCardNotHeart = false;
 		
 		// Build an array of card_id's in the player's hand
-		$playerHandIds=array();$playCards=array();
+		$playerHandIds=array();
+        $playCards=array();
 		foreach ($playerHand as $card)
         {
 			$playerHandIds[]=$card['id'];
@@ -317,6 +323,197 @@ class Tichu extends Table {
 		$bIsInHand=(count($playCardsIds)==count(array_intersect($playCardsIds,$playerHandIds)))?true:false;
 		if( !$bIsInHand )	throw new feException( "Cards are not in your hand" );
 		
+        // Do some basic validation, this will also be validated on client
+        // Figure out what type of play is happening: (playType)
+        //-1 = Dog (This will actually keep playType at -1 so any type can be played, but not bomb)
+        //	0 = Singles
+        //	1 = Doubles
+        //	2 = Triples
+        //	3 = Full House
+        // 4 = Consecutive Doubles
+        //	5-14 = Run of 5 or more
+        // 15 = Dog
+        // 20 = Bomb
+        //
+        // First check if it is a bomb play
+
+        //throw new feException("getting play type");
+        $playType=self::getGameStateValue( 'playType' );
+        
+        //get an array of the values played, this will make validation easier
+        $cardValues = array();
+
+        foreach ($playCards as $card)
+        {
+            array_push($cardValues, $this->getCardPlayValue($card));
+        }
+
+        //throw new feException("sorting card value");
+        sort($cardValues);
+
+        //AK - I think this is easier to validate by expected play type than number of cards
+        //I'll do the non-special cases first...
+        //but first, what is the expected play type?
+        //TODO add bomb handling
+        //TODO add dragon handling
+        //TODO add phoenix handling
+        //throw new feException("calculating play type");
+        if ($playType == -1) //player has free choice. Must first figure out the type of play used.
+        {
+            if (count($playCardsIds) == 1)
+            { //singles
+                $playType = 0;
+            }
+            else if (count($playCardsIds) == 2)
+            { //doubles
+                $playType = 1;
+            }
+            else if (count($playCardsIds) == 3)
+            { //triples
+                $playType = 2;
+            }
+            else if (count($playCardsIds) == 4)
+            { //consecutive doubles
+                $playType = 4; 
+            }
+            else if (count($playCardsIds) == 5) 
+            { //full house OR run
+                if ($cardValues[0] != $cardValues[1])
+                { //a run, otherwise assume a full house
+                    $playType = count($playCardsIds);
+                }
+                else
+                {
+                    $playType = 3;
+                }
+            }
+            else if (count($playCardsIds) > 5)
+            { //consecutive doubles OR run
+                if ($cardValues[0] != $cardValues[1])
+                {
+                    $playType = count($playCardsIds);
+                }
+                else
+                {
+                    $playType = 4;
+                }
+            }
+            else
+            { //should never get this far.
+                throw new feException("Unrecognised play");
+            }
+        
+        }
+
+        //throw new feException("validating play type");
+        //now we have the play type. Is the chosen play valid for that playtype?
+        switch ($playType)
+        {
+            case 0: //singles
+                if (count($playCardsIds) != 1) {
+                    throw new feException("Play type is singles");
+                }
+                if ($cardValues[0] <= $maxCardValue) {
+                    throw new feException("Must play a higher card");
+                }
+                break;
+            case 1: //doubles
+                if (count($playCardsIds) != 2) {
+                    throw new feException("Play type is doubles");
+                }
+                if ($cardValues[0] != $cardValues[1])
+                {
+                    throw new feException("Doubles must match");
+                }
+                if ($cardValues[0] <= $maxCardValue)
+                {
+                    throw new feException("Must play a higher double");
+                }
+                break;
+            case 2: //triples
+                if (count($playCardsIds) != 3) {
+                    throw new feException("Play type is triples");
+                }
+                if ($cardValues[0] != $cardValues[1] || $cardValues[1] != $cardValues[2])
+                {
+                    throw new feException("Triples must match");
+                }
+                if ($cardValues[0] <= $maxCardValue) {
+                    throw new feException("Must play a higher triple");
+                }
+                break;
+            case 3: //full house
+                if (count($playCardsIds) != 5) {
+                    throw new feException("Play type is full house");
+                }
+                //sorted values - first and second card match, 4th and 5th match, middle value must match
+                //one of the two either side
+                if ($cardValues[0] != $cardValues[1] || $cardValues[3] != $cardValues[4] ||
+                    ($cardValues[2] != $cardValues[1] && $cardValues[2] != $cardValues[3]))
+                {
+                    throw new feException("Full House must be a triple and a pair");
+                }
+                if ($cardValues[2] <= $maxCardValue)
+                { //value is the triple card in full house
+                    throw new feException("Must play a higher full house");
+                }
+                break;
+            case 4: //consecutive pairs
+                if (count($playCardsIds) % 2 != 0) {
+                    throw new feException("Play type is consecutive pairs");
+                }
+                for ($i = 0; $i < count($playCardsIds); $i = $i+2) {
+                    if ($cardValues[$i] != $cardValues[$i + 1]) {
+                        throw new feException("Consecutive pairs cannot contain unpairds cards");
+                    }
+                    if ($i > 0 && $cardValues[$i] - $cardValues[$i-2] != 10) {
+                        throw new feException("All pairs must be consecutive");
+                    }
+                    if ($cardValues[count($playCardsIds)-1] <= $maxCardValue) {
+                        throw new feException("Must play higher consecutive pairs");
+                    }
+                }
+                break;
+            case 5: //run
+		    case 6: //run
+		    case 7: //run
+		    case 8: //run
+		    case 9: //run
+		    case 10: //run
+		    case 11: //run
+		    case 12: //run
+		    case 13: //run
+		    case 14: //run
+                if (count($playCardsIds) < 5) {
+                    throw new feException("Play type is straight");
+                }
+                for ($i = 0; $i < count($playCardsIds); $i++) {
+                    if ($i > 0 && $cardValues[$i] - $cardValues[$i - 1] > 10) {
+                        throw new feException("All cards in the straight must be consecutive");
+                    }
+		            if ($cardValues[count($playCardsIds)-1] <= $maxCardValue) {
+                        throw new feException("Must play a higher straight");
+                    }
+		        }
+                break;
+            default :
+                throw new feException("Unhandled play type");
+        }
+
+        //throw new feException("saving data");
+
+        //validation passed!
+        //update variables and save to db.
+        $playValue = $cardValues[count($playCardsIds)-1];
+        self::setGameStateValue( 'maxCardValue', $playValue );
+        self::setGameStateValue( 'playType', $playType);
+
+        //update cards in database
+        $playCards = self::UpdateCardsInDatabase($player_id, $playCardsIds, $playCards);
+
+        //next notify players.
+        //throw new feException("notifying players");
+
 		// Figure out what type of play is happening:
 		//-1 = Dog (This will actually keep playType at -1 so any type can be played, but not bomb)
 		//	0 = Singles
@@ -328,7 +525,7 @@ class Tichu extends Table {
 		// 20+?= Bomb
 		//
 		// First check if it is a bomb play
-		$playType=self::getGameStateValue( 'playType' );
+		/*$playType=self::getGameStateValue( 'playType' );
 		switch (count($playCardsIds)) {
 			case 1:
 				if ($playType>0) // If the current play type is not singles or not first play
@@ -442,7 +639,7 @@ class Tichu extends Table {
                 break;
 			default:
 				throw new feException( 'Play type not yet implemented' );
-		}
+		}*/
 		
 		// Checks are done! now we can play our card
 		// Update database, change card_location from 'hand' to 'cardsontable'
@@ -485,6 +682,28 @@ class Tichu extends Table {
             $displayText = clienttranslate('${player_name} plays a triple ${value_displayed}');
             $displayValue = $this->values_label[ $playCards[0]['type_arg'] ];
             $i18n = array( 'value_displayed' ); //check if needed
+        }
+        else if ($playType == 3) //full house
+        {
+            $displayText = clienttranslate('${player_name} plays a full house of ${value_displayed}');
+            $displayValue = $this->values_label[ $playCards[2]['type_arg'] ];
+            $i18n = array( 'value_displayed' ); //check if needed
+        }
+        else if ($playType == 4) //consecutive pairs
+        {
+            $displayText = clienttranslate('${player_name} plays consecutive pairs of ${value_displayed}');
+            $displayValue = $this->values_label[ $playCards[count($playCards)-1]['type_arg'] ];
+            $i18n = array( 'value_displayed' ); //check if needed
+        }
+        else if ($playType >= 5 && $playType <= 14) //straight
+        {
+            $displayText = clienttranslate('${player_name} plays a straight with a high card of ${value_displayed}');
+            $displayValue = $this->values_label[ $playCards[count($playCards)-1]['type_arg'] ];
+            $i18n = array( 'value_displayed' ); //check if needed
+        }
+        else
+        {
+            throw new feException("Playtype text missing");
         }
 
         $cardColors = array();

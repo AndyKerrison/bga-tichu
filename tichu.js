@@ -237,8 +237,7 @@ function (dojo, declare) {
 
             // In any case: move it to its final destination
 			this.slideToObjectPos('cardontable_'+player_id+'_'+card_id,'playertablecard_'+player_id,leftOffset, topOffset).play();
-		},
-		
+		},		
 		///////////////////////////////////////////////////
 		//// Player's action
 		/* Here, you are defining methods to handle player's action (ex: results of mouse click on 
@@ -321,31 +320,38 @@ function (dojo, declare) {
 			if( ! this.checkAction('playCards') ) return;
 			var items = this.playerHand.getSelectedItems();
 			console.log('onPlayCards:items ',items);//debugger;
-			// Do some basic validation, this will also be validated on server
-			// Figure out what type of play is happening: (playType)
+
+		    // Do some basic validation, this will also be validated on server
+		    // Figure out what type of play is happening: (playType)
+		    //-1 = Dog (This will actually keep playType at -1 so any type can be played, but not bomb)
 			//	0 = Singles
 			//	1 = Doubles
 			//	2 = Triples
 			//	3 = Full House
 			// 4 = Consecutive Doubles
-			//	5-14 = Run of 5 or more
-			// 15 = Dog
-			// 20 = Bomb
+		    //	5-14 = Run of 5 or more
+		    // 15 = Dog
+		    // 20 = Bomb
 			//
 			// First check if it is a bomb play
 
-		    //AK - I think this is easier to validate by expected play type
+		    var playType = this.playType;
+
+            //get an array of the values played, this will make validation easier
+			var cardValues = [];
+			for (var i in items) {
+			    cardValues.push(this.getCardValueByTypeID(items[i].type));
+			}
+		    cardValues = cardValues.sort();
+			
+		    //AK - I think this is easier to validate by expected play type than number of cards
 		    //I'll do the non-special cases first...
 
-		    //-1 = Dog (This will actually keep playType at -1 so any type can be played, but not bomb)
-		    //	0 = Singles
-		    //	1 = Doubles
-		    //	2 = Triples
-		    //	3 = Full House
-		    //	4 = Consecutive Doubles
-		    //	5-14 = Run of 5 or more
-		    var playType = this.playType;
-			if (playType == -1) //player choice. Must first figure out the type of play used.
+		    //but first, what is the expected play type?
+		    //TODO add bomb handling
+		    //TODO add dragon handling
+            //TODO add phoenix handling
+			if (playType == -1) //player has free choice. Must first figure out the type of play used.
 			{
                 if (items.length == 1) { //singles
                     playType = 0;
@@ -354,20 +360,44 @@ function (dojo, declare) {
                     playType = 1;
                 }
                 else if (items.length == 3) { //triples
-                    playType = 2;
-                } else {
-                    this.showMessage(_("Unrecognised play"), 'error');
-                    return;
+			        playType = 2;
                 }
+                else if (items.length == 4) { //consecutive doubles
+			        playType = 4; 
+                }
+                else if (items.length == 5) { //full house OR run
+                    if (cardValues[0] != cardValues[1]) { //a run, otherwise assume a full house
+                        playType = cardValues.length;
+                    } else {
+                        playType = 3;
+                    }
+                }
+                else if (items.length > 5) { //consecutive doubles OR run
+                    if (cardValues[0] != cardValues[1]) {
+                        playType = cardValues.length;
+                    } else {
+                        playType = 4;
+                    }
+                }
+                else { //should never get this far.
+			        this.showMessage(_("Unrecognised play"), 'error');
+			        return;
+			    }
+			}
+
+			console.log("card values: ");
+			for (var i = 0; i < cardValues.length; i++) {
+			    console.log(cardValues[i]);
 			}
 		    
+            //now we have the play type. Is the chosen play valid?
 		    switch (playType) {
 		        case 0: //singles
 		            if (items.length != 1) {
 		                this.showMessage(_("Play type is singles"), 'error');
 		                return;
 		            }
-		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		            else if (cardValues[0] * 10 <= this.maxCardValue) {
 		                this.showMessage(_("Must play a higher card"), 'error');
 		                return;
 		            }
@@ -377,11 +407,11 @@ function (dojo, declare) {
 		                this.showMessage(_("Play type is doubles"), 'error');
 		                return;
 		            }
-		            else if (this.getCardValueByTypeID(items[0].type) != this.getCardValueByTypeID(items[1].type)) {
+		            else if (cardValues[0] != cardValues[1]) {
 		                this.showMessage(_("Doubles must match"), 'error');
 		                return;
 		            }
-		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		            else if (cardValues[0] * 10 <= this.maxCardValue) {
 		                this.showMessage(_("Must play a higher double"), 'error');
 		                return;
 		            }
@@ -391,13 +421,76 @@ function (dojo, declare) {
 		                this.showMessage(_("Play type is triples"), 'error');
 		                return;
 		            }
-		            else if (this.getCardValueByTypeID(items[0].type) != this.getCardValueByTypeID(items[1].type) ||
-		                this.getCardValueByTypeID(items[1].type) != this.getCardValueByTypeID(items[2].type)) {
+		            if (cardValues[0] != cardValues[1] || cardValues[1] != cardValues[2])
+                    {
 		                this.showMessage(_("Triples must match"), 'error');
 		                return;
 		            }
-		            else if (this.getCardValueByTypeID(items[0].type) * 10 <= this.maxCardValue) {
+		            if (cardValues[0] * 10 <= this.maxCardValue) {
 		                this.showMessage(_("Must play a higher triple"), 'error');
+		                return;
+		            }
+		            break;
+		        case 3: //full house
+		            if (items.length != 5) {
+		                this.showMessage(_("Play type is full house"), 'error');
+		                return;
+		            }
+                    //sorted values - first and second card match, 4th and 5th match, middle value must match
+                    //one of the two either side
+		            if (cardValues[0] != cardValues[1] || cardValues[3] != cardValues[4] ||
+                        (cardValues[2] != cardValues[1] && cardValues[2] != cardValues[3]))
+                    {
+                        this.showMessage(_("Full House must be a triple and a pair"), 'error');
+		                return;
+		            }
+		            if (cardValues[2] * 10 <= this.maxCardValue) { //value is the triple card in full house
+		                this.showMessage(_("Must play a higher full house"), 'error');
+		                return;
+		            }
+		            break;
+		        case 4: //consecutive pairs
+		            if (items.length % 2 != 0) {
+		                this.showMessage(_("Play type is consecutive pairs"), 'error');
+		                return;
+		            }
+		            for (i = 0; i < items.length; i = i+2) {
+		                if (cardValues[i] != cardValues[i + 1]) {
+		                    this.showMessage(_("Consecutive pairs cannot contain unpairds cards"), 'error');
+		                    return;
+		                }
+		                if (i > 0 && cardValues[i] - cardValues[i-2] != 1) {
+		                    this.showMessage(_("All pairs must be consecutive"), 'error');
+		                    return;
+		                }
+		            }
+                    if (cardValues[items.length-1] * 10 <= this.maxCardValue) {
+		                this.showMessage(_("Must play higher consecutive pairs"), 'error');
+		                return;
+		            }
+                    break;
+		        case 5: //run
+		        case 6: //run
+		        case 7: //run
+		        case 8: //run
+		        case 9: //run
+		        case 10: //run
+		        case 11: //run
+		        case 12: //run
+		        case 13: //run
+		        case 14: //run
+		            if (items.length < 5) {
+		                this.showMessage(_("Play type is straight"), 'error');
+		                return;
+		            } //todo length check
+		            for (i = 0; i < items.length; i++) {
+		                if (i > 0 && cardValues[i] - cardValues[i - 1] > 1) {
+		                    this.showMessage(_("All cards in the straight must be consecutive"), 'error');
+		                    return;
+		                }
+                    }
+		            if (cardValues[items.length-1] * 10 <= this.maxCardValue) {
+		                this.showMessage(_("Must play a higher straight"), 'error');
 		                return;
 		            }
 		            break;
@@ -412,7 +505,9 @@ function (dojo, declare) {
 			var to_play = '';
 			for( var i in items ) {
 				to_play += items[i].id + ';' ;
-			} console.log('to_play:', to_play);
+			}
+
+			console.log('to_play:', to_play);
 
 			// Send the played cards to server, to be validated by playCards(), this is received back to client 
 			// by the notifyAllPlayers as defined in js:312 & operated on in notif_playCards(js:332) below
