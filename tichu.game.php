@@ -232,6 +232,23 @@ class Tichu extends Table {
 //////////// 
 	/*  Each time a player is doing some game action, one of this method below is called.
 		(note: each method below correspond to an input method in tichu.action.php) */
+    function sortAscending($a, $b)
+    {
+        $value1 = $this->getCardPlayValue($a);
+        $value2 = $this->getCardPlayValue($b);
+        if ($value1 == $value2)
+            return 0;
+        return ($value1 < $value2) ? -1 : 1;
+    }    
+    function sortDescending($a, $b)
+    {
+        $value1 = $this->getCardPlayValue($a);
+        $value2 = $this->getCardPlayValue($b);
+        if ($value1 == $value2)
+            return 0;
+        return ($value1 > $value2) ? -1 : 1;
+    }  
+
     function passGrandTichu(){
         self::notifyAllPlayers( 'grandTichuPass',
             clienttranslate('${player_name} passes'), array(
@@ -294,7 +311,8 @@ class Tichu extends Table {
 	function playCards( $playCardsIds ) { // Press Play button, play cards from player hand
         self::debug("PLAYCARDS server action called with ids [".$playCardsIds."]");
 		self::checkAction( "playCards" );
-		$player_id = self::getActivePlayerId();
+        
+        $player_id = self::getActivePlayerId();
 		// Get all cards in player hand (for checking if the cards played are in player's hand)
 		$playerHand = $this->getCardsInLocation( 'hand', $player_id );
 		// $bFirstCard = ( count( $playerHand ) == 14 ); // Not necessary in Tichu to track the first play
@@ -319,6 +337,10 @@ class Tichu extends Table {
                 $playCards[]=$card;
             }
         }
+        
+        //by default, sort ascending
+        usort($playCards, array($this, "sortAscending"));
+
 		// Check each card to be played and make sure they are ALL in this player's hand
 		$bIsInHand=(count($playCardsIds)==count(array_intersect($playCardsIds,$playerHandIds)))?true:false;
 		if( !$bIsInHand )	throw new feException( "Cards are not in your hand" );
@@ -342,15 +364,11 @@ class Tichu extends Table {
         
         //get an array of the values played, this will make validation easier
         $cardValues = array();
-
         foreach ($playCards as $card)
         {
             array_push($cardValues, $this->getCardPlayValue($card));
         }
-
-        //throw new feException("sorting card value");
-        sort($cardValues);
-
+        
         //AK - I think this is easier to validate by expected play type than number of cards
         //I'll do the non-special cases first...
         //but first, what is the expected play type?
@@ -443,6 +461,7 @@ class Tichu extends Table {
                 }
                 break;
             case 3: //full house
+                //TODO - ideally the full house should sort the triple first. This is a nice to have, not essential.
                 if (count($playCardsIds) != 5) {
                     throw new feException("Play type is full house");
                 }

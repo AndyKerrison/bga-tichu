@@ -340,9 +340,12 @@ function (dojo, declare) {
             //get an array of the values played, this will make validation easier
 			var cardValues = [];
 			for (var i in items) {
-			    cardValues.push(this.getCardValueByTypeID(items[i].type));
+			    cardValues.push(parseInt(this.getCardValueByTypeID(items[i].type)));
 			}
-		    cardValues = cardValues.sort();
+
+			cardValues = cardValues.sort(function (a, b) {
+			    return a - b;
+			});
 			
 		    //AK - I think this is easier to validate by expected play type than number of cards
 		    //I'll do the non-special cases first...
@@ -383,11 +386,6 @@ function (dojo, declare) {
 			        this.showMessage(_("Unrecognised play"), 'error');
 			        return;
 			    }
-			}
-
-			console.log("card values: ");
-			for (var i = 0; i < cardValues.length; i++) {
-			    console.log(cardValues[i]);
 			}
 		    
             //now we have the play type. Is the chosen play valid?
@@ -489,7 +487,7 @@ function (dojo, declare) {
 		                    return;
 		                }
                     }
-		            if (cardValues[items.length-1] * 10 <= this.maxCardValue) {
+		            if (cardValues[items.length - 1] * 10 <= this.maxCardValue) {
 		                this.showMessage(_("Must play a higher straight"), 'error');
 		                return;
 		            }

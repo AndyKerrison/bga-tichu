@@ -118,8 +118,8 @@ $machinestates = array(
 	), 
 	32 => array( 
 	  "name" => "playerTurn",
-	  "description" => clienttranslate('${actplayer} must play a card'),
-	  "descriptionmyturn" => clienttranslate('${you} must play a card'),
+	  "description" => clienttranslate('Waiting for ${actplayer} to play'),
+	  "descriptionmyturn" => clienttranslate('${you} must play or pass'),
 	  "type" => "activeplayer",
 	  "args" => "argPlayerTurn", // This can be added to validate play on client side (Tichu,Pass,Bomb,PlayType)
 	  			// Also used to change description to You must/ You may play a card
