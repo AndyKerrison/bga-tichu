@@ -75,16 +75,21 @@
 	top: 50%;
 	margin-top: -55px; /* half of 130 */
 }
+#dealingstack {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
 .playertablecards {
 	display: inline-flex;/*inline-block*/
 	position: /*static;*/absolute;
 	margin-top: 5px;
-	/*width: 72px;*/
-	/*height: 96px;*/
+	width: 72px;
+	height: 96px;
 }
 /*** cards on table ***/
 .cardontable {
-	position: static !important;
+	position: absolute;
 	width: 72px;
 	height: 96px;
 	background-image: url('img/tichu-cards.png'); 

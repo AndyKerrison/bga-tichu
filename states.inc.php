@@ -65,14 +65,33 @@ $machinestates = array(
 	  "transitions" => array( "" => 21 )
 	),
 	21 => array(       
-	  "name" => "giveCards",
-	  "description" => clienttranslate('Some players must choose 3 cards to give to ${direction}'),
-	  "descriptionmyturn" => clienttranslate('${you} must choose 3 cards to give to ${direction}'),
-	  "type" => "multipleactiveplayer",
+	  "name" => "giveCards1",
+	   "type" => "game",
 	  "action" => "stGiveCards",
-	  "args" => "argGiveCards",
-	  "possibleactions" => array( "giveCards" ),
-	  "transitions" => array( "giveCards" => 22, "skip" => 22 )        
+	  "transitions" => array( "cardsDealt" => 120)        
+	),
+    120 => array(       
+	  "name" => "declareGrandTichu",
+	  "description" => clienttranslate('${actplayer} must choose to call Grand Tichu or Pass'),
+	  "descriptionmyturn" => clienttranslate('${you} must choose to call Grant Tichu or Pass'),
+	  "type" => "activeplayer",
+	  "possibleactions" => array( "callGrandTichu", "passGrandTichu" ),
+	  "transitions" => array( "nextGrandTichu" => 125, "allSkipped" => 130)        
+	),
+    125 => array(       
+	  "name" => "nextPlayerDeclareGrandTichu",
+      "type" => "game",
+      "action" => "stNextPlayerDeclareGrandTichu",
+	  "transitions" => array( "" => 120)        
+	),
+    130 => array(       
+	  "name" => "passCards",
+	  "type" => "multipleactiveplayer",
+      "action" => "stPassCards",
+      "description" => clienttranslate('Waiting for other players to pass cards'),
+      "descriptionmyturn" => clienttranslate('${you} must pass a card left, right, and across'),
+      "possibleactions" => array( "passCards" ),
+      "transitions" => array( "passCards" => 22)        
 	),
 	22 => array(
 	  "name" => "takeCards",
@@ -99,10 +118,10 @@ $machinestates = array(
 	), 
 	32 => array( 
 	  "name" => "playerTurn",
-	  "description" => clienttranslate('${actplayer} must play a card'),
-	  "descriptionmyturn" => clienttranslate('${you} must play a card'),
+	  "description" => clienttranslate('Waiting for ${actplayer} to play'),
+	  "descriptionmyturn" => clienttranslate('${you} must play or pass'),
 	  "type" => "activeplayer",
-	  //"args" => "argPlayerTurn" // This can be added to validate play on client side (Tichu,Pass,Bomb,PlayType)
+	  "args" => "argPlayerTurn", // This can be added to validate play on client side (Tichu,Pass,Bomb,PlayType)
 	  			// Also used to change description to You must/ You may play a card
 	  			// Add to game.php: function argPlayerTurn(){return array('possibleMoves'=>self::getPossibleMoves);}
 	  "possibleactions" => array( "playCards", "passPlay" ), // These are the buttons on GUI

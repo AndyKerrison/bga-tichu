@@ -45,6 +45,7 @@ class action_tichu extends APP_GameAction {
 	}
 	public function giveCards() {
 		self::setAjaxMode();     
+        self::debug("giveCards ajax calling 1");
 		$cards_raw = self::getArg( "cards", AT_numberlist, true );
 		// Removing last ';' if exists
 		if( substr( $cards_raw, -1 ) == ';' )
@@ -54,12 +55,23 @@ class action_tichu extends APP_GameAction {
 		else
 			$cards = explode( ';', $cards_raw );
 		
+        self::debug("giveCards ajax calling 2");
 		$this->game->giveCards( $cards );
 		self::ajaxResponse( );    
 	}
 	public function passPlay() {
 		self::setAjaxMode();     
 		$this->game->passPlay();
+		self::ajaxResponse( );    
+	}
+    public function callGrandTichu() {
+		self::setAjaxMode();     
+		$this->game->callGrandTichu();
+		self::ajaxResponse( );    
+	}
+    public function passGrandTichu() {
+		self::setAjaxMode();     
+		$this->game->passGrandTichu();
 		self::ajaxResponse( );    
 	}
 }
